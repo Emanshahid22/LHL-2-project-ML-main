@@ -1,11 +1,41 @@
 # MGs Forms
 
+<p>
+  <a href="https://app-production-8ce7.up.railway.app"><img alt="Live demo" src="https://img.shields.io/badge/Live%20demo-Railway-0B0D0E?style=flat-square&logo=railway&logoColor=white"></a>
+  <a href="https://app-production-8ce7.up.railway.app/api/docs"><img alt="API docs" src="https://img.shields.io/badge/API%20docs-Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black"></a>
+  <a href="https://github.com/Emanshahid22/LHL-2-project-ML-main/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Emanshahid22/LHL-2-project-ML-main/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Angular 20" src="https://img.shields.io/badge/Angular-20-DD0031?style=flat-square&logo=angular&logoColor=white">
+  <img alt="NestJS 11" src="https://img.shields.io/badge/NestJS-11-E0234E?style=flat-square&logo=nestjs&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="Prisma" src="https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma&logoColor=white">
+  <img alt="Playwright" src="https://img.shields.io/badge/Playwright-219%20checks-2EAD33?style=flat-square&logo=playwright&logoColor=white">
+</p>
+
 Legal document assistance module for UK defence solicitors: guided completion of the
 standardised **MG forms** used in police case files. All ten scoped use cases are
 delivered — form selection, auto-population, the MG11 wizard, the MG6 schedule, field
 validation, legal-language assistance, sensitive-material handling, review & quality
 check, PDF/DOCX generation, and the versioned archive — plus **Release-01:
 authentication & RBAC** (self-hosted OAuth2 + PKCE, four roles, guard-by-default API).
+
+## Live demo
+
+| | |
+|---|---|
+| **Web app** | <https://app-production-8ce7.up.railway.app> |
+| **API docs (Swagger)** | <https://app-production-8ce7.up.railway.app/api/docs> |
+| **Health check** | <https://app-production-8ce7.up.railway.app/api/health> |
+
+Sign in with the seeded **Alex Marlowe** account (`demo.solicitor@example.co.uk`), the
+Senior Solicitor who holds the sensitive-material grant. The deployment sets its password
+through `SEED_USER_PASSWORD` with a forced first-sign-in change — see [Setup](#setup).
+Every case in the demo is fictional; no real case data appears anywhere in this project.
+
+<p align="center">
+  <img src="docs/images/dashboard.png" alt="MG Forms dashboard: workspace summary, the eleven-form picker, and the in-progress draft list" width="100%">
+</p>
+
+<p align="center"><em>The dashboard — workspace counters, the eleven-form picker with contextual descriptions, and the resumable In progress list.</em></p>
 
 ## Documentation map
 
