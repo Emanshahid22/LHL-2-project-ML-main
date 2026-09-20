@@ -449,7 +449,7 @@ never rename or delete an id that drafts may hold values under.
 This project lives alongside other workstreams in a shared repository, so its branches are
 namespaced and follow fixed roles:
 
-- **`ali-zulqarnain/mgs-forms`** — the integration branch for this project. All work lands here via
+- **`/mgs-forms`** — the integration branch for this project. All work lands here via
   PR. (The repo's `main` is a placeholder unrelated to this project's history.)
 - **`mgs/uc-NN-<slug>`** — use-case markers and, from UC-04 onwards, use-case working branches. The
   `mgs/` prefix is deliberate: another workstream in this repo already uses bare `uc-*` names (e.g.
