@@ -1,0 +1,164 @@
+// MGs Forms design tokens.
+//
+// Single source of truth for the visual language. SCSS variables are exported
+// for compile-time needs (breakpoints, spacing maths); everything a component
+// paints with is emitted once as CSS custom properties by `emit-css-vars()`, so
+// component stylesheets reference var(--mg-*) instead of duplicating values.
+//
+// Palette note: a deep, calm professional blue. This is a working tool for
+// defence solicitors handling criminal case files, so the aesthetic stays
+// restrained — no playful accents, no gamified colour.
+
+// ---------------------------------------------------------------- breakpoints
+$bp-wide: 1180px; // 4-up card grid above this
+$bp-mid: 900px; // 2-up
+$bp-narrow: 780px; // queue rows stack their metadata
+$bp-small: 560px; // 1-up
+
+// ------------------------------------------------------------------- spacing
+// 4px base scale.
+$s1: 4px;
+$s2: 8px;
+$s3: 12px;
+$s4: 16px;
+$s5: 20px;
+$s6: 24px;
+$s7: 32px;
+$s8: 40px;
+
+// -------------------------------------------------------------------- colour
+$navy-900: #0b2545;
+$navy-800: #12325c;
+$navy-700: #17406f;
+$blue-600: #1b5fa8;
+$blue-500: #2673c4;
+$blue-100: #dce8f7;
+$blue-050: #eef4fc;
+
+$ink-900: #101720;
+$ink-700: #33404f;
+$ink-500: #5c6a7a;
+$ink-300: #8b97a5;
+
+$surface: #ffffff;
+$surface-sunken: #f4f6fa;
+$border: #dde3ec;
+
+// Advisory amber (hearsay/opinion notes, case-changed banners).
+$amber-700: #8a5200;
+$amber-500: #b26a00;
+$amber-050: #fff6e6;
+
+// UC-07 sensitive material — the red this palette reserved since UC-03. It is
+// UC-07's alone: the restricted-access banner, the locked section and the MG6D
+// chrome, and nothing else. Deliberately distinct from $danger (validation
+// errors): a validation mistake and a sensitive-material regime are different
+// messages and must not share a colour.
+$sensitive-800: #7a1220;
+$sensitive-600: #a4182b;
+$sensitive-050: #fbecee;
+$sensitive-border: #e4b6bc;
+
+$success-700: #1f6b34;
+$success-500: #2e7d32;
+$success-050: #e9f5ec;
+
+$danger-700: #a02020;
+$danger-500: #b3261e;
+$danger-050: #fdeceb;
+
+// ------------------------------------------------------- radii and elevation
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 14px;
+$radius-pill: 999px;
+
+$shadow-sm: 0 1px 2px rgba(16, 23, 32, 0.06), 0 1px 3px rgba(16, 23, 32, 0.04);
+$shadow-md: 0 2px 6px rgba(16, 23, 32, 0.07), 0 6px 16px rgba(16, 23, 32, 0.06);
+$shadow-lg: 0 10px 30px rgba(11, 37, 69, 0.16);
+
+// Per-form accent hues for the picker cards. Muted enough to sit together
+// without shouting; each is paired with a tint for the icon plate.
+$form-accents: (
+  'indigo': (#3b4c8a, #e8eaf6),
+  'teal': (#1a6a6a, #e3f2f1),
+  'plum': (#6a3d6e, #f3e8f4),
+  'slate': (#3d5566, #e8eef2),
+  'moss': (#3f6135, #eaf1e6),
+  'clay': (#8a4b2a, #f7ece5),
+);
+
+// ------------------------------------------------------------------ emitters
+// Called once from styles.scss.
+@mixin emit-css-vars {
+  --mg-navy-900: #{$navy-900};
+  --mg-navy-800: #{$navy-800};
+  --mg-navy-700: #{$navy-700};
+  --mg-blue-600: #{$blue-600};
+  --mg-blue-500: #{$blue-500};
+  --mg-blue-100: #{$blue-100};
+  --mg-blue-050: #{$blue-050};
+
+  --mg-ink-900: #{$ink-900};
+  --mg-ink-700: #{$ink-700};
+  --mg-ink-500: #{$ink-500};
+  --mg-ink-300: #{$ink-300};
+
+  --mg-surface: #{$surface};
+  --mg-surface-sunken: #{$surface-sunken};
+  --mg-border: #{$border};
+
+  --mg-amber-700: #{$amber-700};
+  --mg-amber-500: #{$amber-500};
+  --mg-amber-050: #{$amber-050};
+
+  --mg-success-700: #{$success-700};
+  --mg-success-500: #{$success-500};
+  --mg-success-050: #{$success-050};
+
+  --mg-danger-700: #{$danger-700};
+  --mg-danger-500: #{$danger-500};
+  --mg-danger-050: #{$danger-050};
+
+  --mg-sensitive-800: #{$sensitive-800};
+  --mg-sensitive-600: #{$sensitive-600};
+  --mg-sensitive-050: #{$sensitive-050};
+  --mg-sensitive-border: #{$sensitive-border};
+
+  --mg-radius-sm: #{$radius-sm};
+  --mg-radius-md: #{$radius-md};
+  --mg-radius-lg: #{$radius-lg};
+  --mg-radius-pill: #{$radius-pill};
+
+  --mg-shadow-sm: #{$shadow-sm};
+  --mg-shadow-md: #{$shadow-md};
+  --mg-shadow-lg: #{$shadow-lg};
+
+  --mg-s1: #{$s1};
+  --mg-s2: #{$s2};
+  --mg-s3: #{$s3};
+  --mg-s4: #{$s4};
+  --mg-s5: #{$s5};
+  --mg-s6: #{$s6};
+  --mg-s7: #{$s7};
+  --mg-s8: #{$s8};
+
+  // The hero band. Kept as a token so the same gradient can be reused.
+  --mg-hero-gradient: linear-gradient(
+    135deg,
+    #{$navy-900} 0%,
+    #{$navy-800} 42%,
+    #{$blue-600} 100%
+  );
+}
+
+// Per-form accent classes, emitted once. `.accent-<name>` sets the two custom
+// properties a picker card paints with.
+@mixin emit-accent-classes {
+  @each $name, $pair in $form-accents {
+    .accent-#{$name} {
+      --mg-accent: #{nth($pair, 1)};
+      --mg-accent-tint: #{nth($pair, 2)};
+    }
+  }
+}

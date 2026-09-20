@@ -1,0 +1,116 @@
+<a routerLink="/" class="back-link">← Dashboard</a>
+
+<mat-card appearance="outlined" class="archive-card">
+  <mat-card-header>
+    <mat-card-title>MG Forms archive</mat-card-title>
+    <mat-card-subtitle
+      >Every generated form — standalone forms live here until linked to a case</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content>
+    <div class="filters" data-testid="archive-filters">
+      <mat-select
+        class="filter"
+        [(ngModel)]="filterForm"
+        aria-label="Filter by form type"
+        data-testid="filter-form"
+        placeholder="Form type"
+      >
+        <mat-option value="">All forms</mat-option>
+        @for (t of templates(); track t.code) {
+          <mat-option [value]="t.code">{{ t.code }}</mat-option>
+        }
+      </mat-select>
+
+      <mat-select
+        class="filter"
+        [(ngModel)]="filterCase"
+        aria-label="Filter by case"
+        data-testid="filter-case"
+        placeholder="Case"
+      >
+        <mat-option value="">All cases</mat-option>
+        <mat-option value="standalone">Standalone (no case)</mat-option>
+        @for (c of cases(); track c.id) {
+          <mat-option [value]="c.id">{{ c.urn }} — {{ c.defendantName }}</mat-option>
+        }
+      </mat-select>
+
+      <!-- Filter controls, not form fields: the shared datepicker/IsoDateAdapter
+           discipline governs draft VALUES; these native inputs emit ISO and
+           display per the en-GB locale. -->
+      <input
+        class="filter filter-date"
+        type="date"
+        [(ngModel)]="filterFrom"
+        aria-label="Generated on or after"
+        data-testid="filter-from"
+      />
+      <input
+        class="filter filter-date"
+        type="date"
+        [(ngModel)]="filterTo"
+        aria-label="Generated on or before"
+        data-testid="filter-to"
+      />
+
+      <mat-select
+        class="filter"
+        [(ngModel)]="filterStatus"
+        aria-label="Filter by status"
+        data-testid="filter-status"
+        placeholder="Status"
+      >
+        <mat-option value="">Any status</mat-option>
+        <mat-option value="Final">Final</mat-option>
+        <mat-option value="Amendment in progress">Amendment in progress</mat-option>
+      </mat-select>
+
+      <button matButton="filled" type="button" data-testid="archive-search" (click)="search()">
+        Search
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="spinner-row"><mat-spinner diameter="28" /></div>
+    } @else if (entries().length === 0) {
+      <p class="empty" data-testid="archive-empty">No archived forms match.</p>
+    } @else {
+      @for (entry of entries(); track entry.lineageId) {
+        <div class="archive-lineage" [attr.data-testid]="'archive-row-' + entry.lineageId">
+          <div class="archive-primary">
+            <span class="doc-form" data-testid="archive-form">{{ entry.formCode }}</span>
+            <span class="doc-version" data-testid="archive-version"
+              >V{{ entry.current.versionNumber }} — {{ entry.current.label }}</span
+            >
+            <span class="doc-date">{{ entry.current.createdAt | date: 'dd/MM/yyyy' }}</span>
+            <span class="doc-case" data-testid="archive-case">{{ caseName(entry.caseId) }}</span>
+            <span class="doc-status" data-testid="archive-status">{{ entry.status }}</span>
+            @if (!entry.caseId) {
+              <button
+                matButton
+                type="button"
+                data-testid="archive-link-case"
+                (click)="openLinkDialog(entry)"
+              >
+                Link to case
+              </button>
+            }
+            <button
+              matButton
+              type="button"
+              data-testid="archive-history-toggle"
+              (click)="toggle(entry.lineageId)"
+            >
+              {{ expanded() === entry.lineageId ? 'Hide history' : 'History' }}
+              ({{ entry.versionCount }})
+            </button>
+          </div>
+          @if (expanded() === entry.lineageId) {
+            <app-version-drawer [lineageId]="entry.lineageId" />
+          }
+        </div>
+      }
+    }
+  </mat-card-content>
+</mat-card>

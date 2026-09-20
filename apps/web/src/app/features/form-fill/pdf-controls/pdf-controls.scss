@@ -1,0 +1,72 @@
+/* UC-09 generation controls. Failure and the draft label wear the advisory
+ * amber; red is NOT used here — it stays reserved for UC-07 sensitive
+ * material (rule 6). Design tokens only. */
+.pdf-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mg-s3);
+  margin-top: var(--mg-s2);
+}
+
+.pdf-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mg-s2);
+  max-width: 420px;
+  font-size: 0.9rem;
+  color: var(--mg-ink-500);
+}
+
+.pdf-failure {
+  display: flex;
+  align-items: center;
+  gap: var(--mg-s3);
+  flex-wrap: wrap;
+  background: var(--mg-amber-050);
+  color: var(--mg-amber-700);
+  border: 1px solid var(--mg-amber-500);
+  border-radius: var(--mg-radius-sm);
+  padding: var(--mg-s3) var(--mg-s4);
+}
+
+.pdf-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--mg-s3);
+  flex-wrap: wrap;
+}
+
+.docx-note {
+  font-size: 0.8rem;
+  color: var(--mg-ink-500);
+  max-width: 44ch;
+}
+
+.pdf-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mg-s3);
+  font-size: 0.85rem;
+  color: var(--mg-ink-500);
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--mg-s2);
+}
+
+.pdf-preview-frame {
+  overflow: auto;
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-sm);
+  background: var(--mg-surface-sunken);
+  max-height: 660px;
+
+  iframe {
+    display: block;
+    border: 0;
+    min-width: 50%;
+  }
+}

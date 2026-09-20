@@ -1,0 +1,44 @@
+Epic — Decomposition
+
+Goal
+- Replace the nine placeholder MG form templates (MG1, MG2, MG3, MG4, MG6, MG12, MG14,
+  MG15, MG16) with practitioner-grade field sets, and add the guardrails that stop an
+  unverified legal form from being treated as verified. Only MG11 and MG5 are realistic
+  today; this is the gap between a demo and a tool a defence solicitor could file from.
+
+What to do
+- Break this Epic into clear, independent, well-formed user stories (see the Epic
+  description's "User Stories" section — five are already identified). No code and no PRD
+  at this stage.
+- Each story must be self-contained: an "As a <role>, I want …, so that …" intent plus
+  testable acceptance criteria.
+
+Deliverables Directory (OPTIONAL — absolute path)
+- Also write each generated user story as its own .md file in: /root/mgs-forms/docs/stories
+- Create the directory from scratch if it does not exist.
+
+Assignment
+- Assign this Epic and every created user story to ali.zulqarnain@consultancyoutfit.co.uk.
+
+Notes
+- This is an EPIC — the only outcome here is well-formed user stories (plus the optional
+  files). Do NOT write code or a PRD at this stage.
+
+- IMPORTANT, split the stories by risk. This product handles real criminal case files, so
+  two of the five stories must NOT be coded autonomously and should be labelled
+  "human-authored, agent-assisted" in their acceptance criteria:
+    * "Draft field sets from authoritative sources" — proposing the contents of a
+      statutory police/CPS form requires sourced evidence per field and a practitioner
+      review. An agent must not invent form fields; a wrong box on an MG form is a
+      professional-conduct risk, not a cosmetic bug.
+    * "Existing drafts survive template growth" — depends on a judgement call about
+      whether to honour templateVersion or accept forward-migration, and touches stored
+      data in FormDraft.valuesJson.
+  The other three stories (per-template verification state; practitioner review artifact;
+  house-style conformance check) are well-specified, mechanical, and safe to code
+  autonomously — decompose those with full acceptance criteria so they can proceed.
+
+- Context the stories should carry: templateVersion is currently recorded but never
+  honoured (apps/web/src/app/features/form-fill/form-fill-page.ts loads the template by
+  formCode alone), and FormFieldDefinition has no repeating-group type, so MG12 (exhibit
+  list) and MG6 (unused material schedule) cannot be fully faithful yet.

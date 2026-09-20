@@ -1,0 +1,123 @@
+@use 'tokens' as t;
+
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: t.$s6;
+  height: 60px;
+  padding: 0 t.$s6;
+  background: var(--mg-navy-900);
+  color: #fff;
+  box-shadow: var(--mg-shadow-sm);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: t.$s2;
+  color: inherit;
+  text-decoration: none;
+  flex: 0 0 auto;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--mg-radius-sm);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.brand-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: t.$s1;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: t.$s2;
+  padding: t.$s2 t.$s3;
+  border-radius: var(--mg-radius-pill);
+  // 0.82 alpha on the navy gives ~7:1 against #fff text; active state is 1.0.
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  &.is-active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+  }
+}
+
+.app-user {
+  display: inline-flex;
+  align-items: center;
+  gap: t.$s3;
+  flex: 0 0 auto;
+}
+
+.user-name {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--mg-blue-500);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: t.$s6 t.$s4 t.$s8;
+}
+
+@media (max-width: t.$bp-narrow) {
+  .app-bar {
+    height: auto;
+    flex-wrap: wrap;
+    gap: t.$s3;
+    padding: t.$s3 t.$s4;
+  }
+
+  .app-nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .user-name {
+    display: none;
+  }
+}

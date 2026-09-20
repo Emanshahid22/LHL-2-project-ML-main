@@ -1,0 +1,143 @@
+name: CI
+
+# Only branches carrying this file trigger it, so other workstreams in this
+# shared repo are unaffected.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build and E2E
+    runs-on: ubuntu-latest
+    # 40, not 20: the full 248-check E2E suite takes ~9 minutes on the dev
+    # box and this job also installs, audits, builds and renders first — a
+    # 2-core runner needs the headroom. Set when the suite first ran in CI.
+    timeout-minutes: 40
+    # The outcome-mirror step below pushes a ref.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # engines requires Node >=20; pinning the floor catches accidental use of
+      # newer-only APIs.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Two postinstalls matter here: the root one builds libs/shared (both apps
+      # consume it), and apps/api's runs `prisma generate`. Without the latter a
+      # clean checkout has no generated client and the very next step dies with
+      # "@prisma/client did not initialize yet". `db:setup` also generates, so the
+      # step is self-healing even if install scripts are skipped.
+      - name: Install dependencies
+        run: npm ci
+
+      # Dependency advisories gate. High and critical block the build; the
+      # deepmerge-ts advisory (GHSA-ggr8-5vv4-36mx) that used to trip this is
+      # resolved by the root package.json `overrides` — if this step starts
+      # failing, a NEW advisory has landed and needs the same treatment, not a
+      # level downgrade.
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      # Throwaway SQLite database: applies migrations and seeds the demo user
+      # and five fictional cases the E2E suite asserts against.
+      - name: Set up database
+        run: npm run db:setup
+
+      # Template conformance: fails a template that regresses below the
+      # house-style bar (structural rules for all, sourcing rules for assessed).
+      - name: Template conformance
+        run: npm run conformance
+
+      # Orphan scan: exit 1 if any draft holds data under a field id its
+      # template has dropped. On CI's fresh database this mostly proves the
+      # tool's template/derived-key wiring still loads — the load-bearing run
+      # against real drafts stays in the local pre-PR pipeline on dev.db.
+      - name: Orphan scan
+        run: npm run orphan-scan
+
+      # UC-09: the storage audit — self-tests, then a live walk of document
+      # rows, stored bytes (must be ciphertext) and download-filename
+      # templates against personal-data patterns drawn from the seeded
+      # database (DoD 2's repeatable half + DoD 3 / Global DoD #11).
+      - name: PII scan
+        run: npm run pii-scan
+
+      # Unit tests run against libs/shared/dist, which the root postinstall
+      # built during `npm ci` — if that postinstall is ever removed, these
+      # would silently test a stale dist (the MG6/35-fields trap; see
+      # libs/shared/test/README.md). Before the app builds so a broken pure
+      # function fails in seconds, not minutes.
+      - name: Unit tests
+        run: npm run test:unit
+
+      # nest build + Angular production bundle. Also enforces the
+      # anyComponentStyle budget, so style bloat fails here.
+      - name: Build API and web
+        run: npm run build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      # UC-09: the e2e suite asserts on extracted PDF text (band on every
+      # page, pinned declaration, page totals) via pdftotext.
+      - name: Install poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      # UC-09: reference-render regression gate (LER-1156/1157) — re-renders
+      # the 11 forms from the frozen fixture values through the real binding
+      # and pixel-diffs them against the committed baselines. Drift fails;
+      # diff images land in test-results/ and ride the trace upload below.
+      # This gate's second job: a Chromium version bump that changes output
+      # fails HERE, visibly, instead of shipping quietly.
+      # The committed baselines are captured on THIS runner class by the
+      # "Capture reference renders" workflow (deviation 12 final resolution:
+      # rasterization differs between machines even with the embedded font,
+      # so only same-environment comparison is deterministic). A local
+      # `npm run render-regression` is advisory; this step is the gate.
+      - name: Render regression
+        id: render_regression
+        run: npm run render-regression
+
+      # Starts the API and web dev servers itself (see playwright.config.ts).
+      - name: Run E2E suite
+        id: e2e
+        run: npm run test:e2e
+
+      # Read-back for the SSH-only dev VPS: it has no GitHub API token, so it
+      # cannot see check runs — this mirrors the job outcome into a plain git
+      # ref it can fetch (`git fetch origin '+refs/ci/*:refs/ci/*'`). Ref name
+      # carries the verdict: <branch>/<run>/<job status>-rr-<render-regression
+      # outcome>-e2e-<e2e outcome>. Refs under refs/ci/ are invisible to
+      # normal clones and safe to prune at any time.
+      - name: Mirror outcome to a git ref
+        if: always()
+        run: |
+          git push -f origin \
+            "HEAD:refs/ci/${GITHUB_REF_NAME}/${GITHUB_RUN_ID}/${{ job.status }}-rr-${{ steps.render_regression.outcome }}-e2e-${{ steps.e2e.outcome }}"
+
+      # Traces are retained on failure only — open with `npx playwright show-trace`.
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

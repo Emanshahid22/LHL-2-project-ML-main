@@ -1,0 +1,154 @@
+/* UC-07: every colour here is a --mg-sensitive-* token — the red reserved for
+ * sensitive material since UC-03, and used nowhere else. */
+.sensitive-section {
+  margin: var(--mg-s5) 0;
+  border: 1px solid var(--mg-sensitive-border);
+  border-radius: var(--mg-radius-md);
+  background: var(--mg-sensitive-050);
+  overflow: hidden;
+}
+
+.sensitive-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--mg-s2);
+  padding: var(--mg-s3) var(--mg-s4);
+  background: var(--mg-sensitive-800);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.banner-glyph {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sensitive-pending,
+.sensitive-locked,
+.handling-instructions,
+.sensitive-preview,
+.confirm-gate,
+.pii-panel {
+  padding: var(--mg-s4);
+}
+
+.sensitive-locked .locked-title {
+  margin: 0 0 var(--mg-s2);
+  font-weight: 600;
+  color: var(--mg-sensitive-800);
+}
+
+.locked-detail {
+  margin: 0 0 var(--mg-s2);
+  color: var(--mg-ink-700);
+}
+
+.block-title {
+  margin: 0 0 var(--mg-s3);
+  font-size: 0.95rem;
+  color: var(--mg-sensitive-800);
+}
+
+.instruction-list,
+.pii-steps {
+  margin: 0;
+  padding-left: var(--mg-s5);
+  display: grid;
+  gap: var(--mg-s3);
+}
+
+.instruction-text {
+  display: block;
+  color: var(--mg-ink-900);
+}
+
+.instruction-source {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--mg-ink-500);
+}
+
+.instruction-notice {
+  margin: var(--mg-s3) 0 0;
+  padding: var(--mg-s2) var(--mg-s3);
+  border-left: 3px solid var(--mg-sensitive-600);
+  font-size: 0.85rem;
+  color: var(--mg-ink-700);
+  background: var(--mg-surface);
+  border-radius: var(--mg-radius-sm);
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--mg-surface);
+  border-radius: var(--mg-radius-sm);
+  font-size: 0.88rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--mg-s2) var(--mg-s3);
+    border-bottom: 1px solid var(--mg-border);
+    vertical-align: top;
+  }
+
+  th {
+    color: var(--mg-ink-500);
+    font-weight: 600;
+  }
+}
+
+.confirm-gate {
+  border-top: 1px dashed var(--mg-sensitive-border);
+  display: grid;
+  gap: var(--mg-s3);
+  justify-items: start;
+}
+
+.confirm-button:not(:disabled) {
+  background: var(--mg-sensitive-600);
+  color: #fff;
+}
+
+.confirm-error {
+  margin: 0;
+  color: var(--mg-sensitive-800);
+  font-weight: 500;
+}
+
+.confirm-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--mg-ink-500);
+}
+
+.pii-panel {
+  border-top: 1px dashed var(--mg-sensitive-border);
+}
+
+.pii-link {
+  display: inline-block;
+  margin-top: var(--mg-s3);
+  color: var(--mg-sensitive-600);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.pii-link-note {
+  margin: var(--mg-s1) 0 0;
+  font-size: 0.78rem;
+  color: var(--mg-ink-500);
+}
+
+.pii-ack {
+  margin-top: var(--mg-s3);
+}
+
+.pii-acked {
+  font-size: 0.85rem;
+  color: var(--mg-success-700);
+  font-weight: 500;
+}

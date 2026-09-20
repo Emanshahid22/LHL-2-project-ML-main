@@ -1,0 +1,327 @@
+// MGs Forms data model.
+//
+// Dev runs on SQLite; the schema is kept portable to PostgreSQL:
+//  - switch the datasource provider to "postgresql"
+//  - DraftStatus and audit actions are plain strings here because SQLite has
+//    no enum support; on Postgres they can become native enums without any
+//    application change (values already match the shared DraftStatus type).
+//  - JSON payloads (draft values, audit metadata) are stored as serialised
+//    strings; on Postgres these columns can become `Json`.
+//
+// Identifiers are cuids everywhere. No case data (URNs, names) ever appears
+// in file names, URLs or storage paths — only these opaque ids.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String
+  /// UC-07: holds the "Sensitive Material Access" permission level. A boolean,
+  /// not a role system — real RBAC arrives with real auth. There is no UI or
+  /// endpoint that grants it (deliberate: see uc-07 open-questions Q2).
+  sensitiveMaterialAccess Boolean @default(false)
+  createdAt   DateTime     @default(now())
+  caseAccess  CaseAccess[]
+  drafts      FormDraft[]
+  auditEvents AuditEvent[]
+  sensitiveAcknowledgements SensitiveAcknowledgement[]
+  roles       UserRole[]
+  credential  PasswordCredential?
+  sessions    AuthSession[]
+}
+
+model Case {
+  id               String        @id @default(cuid())
+  urn              String        @unique
+  defendantName    String
+  /// Single primary summary for display; individual offences live in CaseOffence
+  offenceSummary   String
+  courtName        String?
+  nextHearingAt    DateTime?
+  cpsReference     String?
+  officerInCase    String?
+  defendantAddress String?
+  defendantDob     DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  access           CaseAccess[]
+  drafts           FormDraft[]
+  offences         CaseOffence[]
+}
+
+/// One charged offence on a case. A case can carry several; auto-population
+/// treats divergent values across offences (e.g. two offence dates) as
+/// ambiguous rather than guessing.
+model CaseOffence {
+  id            String   @id @default(cuid())
+  caseId        String
+  offenceDate   DateTime
+  chargeWording String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+/// Grants a user access to a case. Real RBAC (roles, firms, teams) can be
+/// layered on later; every case query is already scoped through this table.
+model CaseAccess {
+  id     String @id @default(cuid())
+  userId String
+  caseId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, caseId])
+}
+
+/// A form instance. Versioning-ready for the archive/versioning use cases:
+/// `version` increments on every save, `templateVersion` pins the template
+/// the draft was created against, and `status` will gain FINALISED/ARCHIVED.
+model FormDraft {
+  id              String   @id @default(cuid())
+  formCode        String
+  templateVersion Int
+  /// DRAFT | FINALISED | ARCHIVED (string for SQLite portability)
+  status          String   @default("DRAFT")
+  version         Int      @default(1)
+  /// Serialised JSON object of field values keyed by field id
+  valuesJson      String   @default("{}")
+  /// Serialised JSON map of auto-fill provenance keyed by field id (UC-02):
+  /// { source: 'case', caseUpdatedAt: ISO, value: <as written>, accepted: bool }
+  autoFillJson    String   @default("{}")
+  userId          String
+  caseId          String?
+  /// UC-10: the root draft's id for every member of a form's amendment
+  /// lineage (the root included, set lazily at first archive/reopen).
+  /// Nullable — drafts that were never generated have no lineage yet.
+  lineageId       String?
+  /// UC-10: the draft this copy was re-opened from. Null on originals.
+  amendedFromId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
+  case            Case?    @relation(fields: [caseId], references: [id])
+
+  @@index([userId, status])
+  @@index([lineageId])
+}
+
+/// UC-07: one row per confirmation/acknowledgement act on a draft's sensitive
+/// section — per-user, persisted, auditable, and APPEND-ONLY: no route or
+/// service method updates or deletes a row (a structural check greps for it).
+/// Step-up means rows accumulate: each fresh access records a new one.
+model SensitiveAcknowledgement {
+  id          String   @id @default(cuid())
+  userId      String
+  draftId     String
+  /// HANDLING_INSTRUCTIONS | PII_STEPS (string for SQLite portability)
+  kind        String
+  /// The wording-hash pin acknowledged (see libs/shared sensitive-material.ts),
+  /// so a later wording change is distinguishable in the trail.
+  wordingHash String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([draftId, userId, kind])
+}
+
+model AuditEvent {
+  id           String   @id @default(cuid())
+  userId       String
+  /// e.g. FORM_INITIATED | DRAFT_SAVED
+  action       String
+  formDraftId  String?
+  /// Serialised JSON metadata
+  metadataJson String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([formDraftId])
+  @@index([userId, createdAt])
+}
+
+/// UC-09: one generated document — the DB row is the ONLY place a document's
+/// identity is human-decodable. Bytes live on the volume as AES-256-GCM
+/// ciphertext under a storage key derived purely from opaque ids and the
+/// content hash (documents/<caseId|standalone>/<contentHash>.<kind>.enc), so
+/// no defendant personal data can appear in a file name or path by
+/// construction (DoD 3; tools/pii-scan enforces it). Readable filenames are
+/// derived at download time from this row and never stored (LER-1167).
+model GeneratedDocument {
+  id              String   @id @default(cuid())
+  draftId         String
+  caseId          String?
+  formCode        String
+  templateVersion Int
+  /// pdf | docx (string for SQLite portability)
+  kind            String
+  /// SHA-256 of the PLAINTEXT — content identity survives re-encryption.
+  contentHash     String
+  /// NOT unique: two drafts with identical content share one ciphertext file
+  /// (content-addressed), each under its own row — the rows then share the
+  /// file's cipher identity (iv/authTag), because the bytes are the bytes.
+  /// Per draft, one row per (kind, contentHash).
+  storageKey      String
+  /// Always 'aes-256-gcm' today; recorded per row so a future algorithm
+  /// change is distinguishable in place.
+  cipher          String
+  /// Random 96-bit IV, hex. Never reused across documents.
+  iv              String
+  /// GCM auth tag, hex — tampered ciphertext fails decryption rather than
+  /// serving altered content.
+  authTag         String
+  sizeBytes       Int
+  pageCount       Int
+  /// UC-10 stub (PRD §7): 'pending-uc10' until the archive use case exists.
+  archiveStatus   String   @default("pending-uc10")
+  renderedBy      String
+  createdAt       DateTime @default(now())
+
+  @@unique([draftId, storageKey])
+  @@index([storageKey])
+  @@index([draftId])
+}
+
+/// UC-10: one row per minted version of a form lineage — APPEND-ONLY by
+/// construction: no endpoint deletes, renames or renumbers a row, and the
+/// unique (lineageId, versionNumber) makes numbers monotonic per lineage.
+///
+/// VERSION IDENTITY IS ROW-LEVEL, NOT CONTENT-LEVEL (Phase-1 review,
+/// condition 1): content-addressing dedupes stored BYTES, never history. An
+/// amendment finalised with content identical to the prior version still
+/// mints a new row here, pointing (via documentId) at the same immutable
+/// encrypted file; the document row carries its own contentHash/authTag
+/// pairing exactly as the UC-09 twin-row discipline already does.
+/// contentHash is denormalised here so a version's byte-integrity is
+/// assertable without trusting the document join.
+model ArchivedVersion {
+  id             String   @id @default(cuid())
+  /// Root draft id of the lineage (FormDraft.lineageId).
+  lineageId      String
+  /// Engine-assigned, monotonic per lineage: V1, V2, ... (LER-1177).
+  versionNumber  Int
+  /// 'Original' (cycle 0) or 'Amendment N' — derived at mint by the shared
+  /// versionLabel(), stored so history keeps the label it minted with.
+  label          String
+  /// Amendment depth of the minting draft: root = 0.
+  cycle          Int
+  /// The draft whose generation minted this version.
+  draftId        String
+  formCode       String
+  templateVersion Int
+  /// The PDF's GeneratedDocument row (cipher identity lives there).
+  documentId     String
+  /// The DOCX produced by the same render, when one exists.
+  docxDocumentId String?
+  /// SHA-256 of the version's plaintext PDF — copied from the document row
+  /// at mint (see model comment).
+  contentHash    String
+  /// Case attachment; null = personal archive (LER-1184) until linked.
+  caseId         String?
+  /// Owner (the minting user).
+  userId         String
+  /// Display name at mint — history shows who generated it, frozen.
+  generatedByName String
+  /// Field values snapshot at mint (same trust level as FormDraft.valuesJson,
+  /// which already holds these values). Feeds the LER-1183 diff; sensitive
+  /// keys are redacted per caller AT READ, never at write.
+  valuesSnapshotJson String
+  /// Whether the minted render includes active MG6D content — recorded from
+  /// the render model at mint, never recomputed from stored bytes. Drives
+  /// the serve-time UC-07 re-check.
+  containsSensitive Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([lineageId, versionNumber])
+  @@index([caseId])
+  @@index([userId, formCode])
+}
+
+/// UC-09: a render job. Generation runs off the request path; the client
+/// polls this row. Failure preserves the draft — a job row never references
+/// draft content, only ids (the audit-metadata discipline).
+model PdfJob {
+  id            String   @id @default(cuid())
+  draftId       String
+  /// queued | rendering | done | failed
+  status        String   @default("queued")
+  /// The PDF row (authoritative output). The job renders PDF and DOCX from
+  /// ONE render model, so the pair can never disagree about content.
+  documentId    String?
+  /// The DOCX row produced by the same render.
+  docxDocumentId String?
+  /// User-readable, content-free failure summary (e.g. "Renderer timed out").
+  failureReason String?
+  retryable     Boolean  @default(true)
+  requestedBy   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([draftId, createdAt])
+}
+
+/// Release-01 (LER-1014, D-G as amended): roles are DATA — rows seeded from
+/// the shared ROLE_CAPABILITIES map; renameable/amendable at ratification
+/// without code change. Names/count are the ticket's verbatim four.
+model Role {
+  id               String     @id @default(cuid())
+  name             String     @unique
+  /// JSON array of capability strings (see libs/shared access-control).
+  capabilitiesJson String
+  createdAt        DateTime   @default(now())
+  users            UserRole[]
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+/// Release-01 (LER-1013): Argon2id credential, separate from User so the
+/// hash never rides user queries. mustChange drives the forced change after
+/// an admin-initiated reset (ruling #5).
+model PasswordCredential {
+  userId     String   @id
+  argon2Hash String
+  mustChange Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Release-01 (LER-1013): server-side session rows behind the HttpOnly
+/// cookie (BFF). 8h idle / 12h absolute (ruling #3); logout revokes.
+model AuthSession {
+  id         String    @id @default(cuid())
+  userId     String
+  csrfSecret String
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Release-01 (LER-1013): single-use authorization codes for the
+/// code + PKCE hop (S256 challenge stored, verifier never stored).
+model AuthCode {
+  code          String    @id
+  userId        String
+  pkceChallenge String
+  expiresAt     DateTime
+  usedAt        DateTime?
+}

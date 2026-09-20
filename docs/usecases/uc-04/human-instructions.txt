@@ -1,0 +1,130 @@
+Full-Stack / Codebase Task — UC-04 MG6 Unused Material Schedule
+
+Repos (single monorepo; frontend, backend and shared domain package all live here)
+- Monorepo: mgs-forms — https://github.com/consultancy-outfit/LHL-2-project-ML.git — path: /root/mgs-forms
+  - apps/web  Angular 20 (standalone components, signals) + Angular Material
+  - apps/api  NestJS 11 + Prisma (SQLite in dev)
+  - libs/shared  framework-free domain package consumed by BOTH apps — form templates live here
+
+Git Workflow
+- git checkout ali-zulqarnain/mgs-forms && git pull origin ali-zulqarnain/mgs-forms
+- git checkout -b mgs/uc-04-mg6-schedule        # the UC working branch — do the work here
+- implement, commit, then: git push origin mgs/uc-04-mg6-schedule
+- open a PR into ali-zulqarnain/mgs-forms when the epic's Definition of Done is met
+- Per-ticket LER-NNNN branches off the UC branch ONLY if a reviewer asks for a ticket to be
+  reviewed separately; otherwise keep the UC branch as the single unit of review.
+- NOTE: do NOT target the repo's `main`. It holds only a placeholder README and shares no ancestor
+  with this project's history.
+- DEVIATION from the org standard's `<JIRA-TICKET-ID>` branch naming, stated rather than silently
+  contradicted: branches here are `mgs/uc-NN-<slug>` because the USE CASE is the unit of work and
+  review — one epic's stories land as one reviewable branch, and per-ticket LER-NNNN branches are
+  cut off it only when a reviewer asks for one ticket separately.
+
+Read before writing any code
+- docs/usecases/uc-04/epic.md and prd.md — the PRD's mechanism section (§4) and business rules (§8)
+  are the contract. The scope's Definition of Done is quoted verbatim in both.
+- docs/usecases/uc-04/stories/ — one file per ticket, with its Given/When/Then criteria.
+- CLAUDE.md — the nine rules that must not be broken.
+- docs/answers/LER-1205-designation-mismatches.md — why the MG6 designation is disputed.
+
+Build Order (shared library first — both apps compile against it)
+- DEVIATION from the org standard's frontend-mocks-first order, stated rather than silently
+  contradicted: the order here is shared engine -> API -> UI, because libs/shared is the single
+  source of truth BOTH apps compile against — the domain types and rules must exist before either
+  app can honestly mock or consume them, and a frontend mocked against guessed types would be
+  rework, not progress.
+- 1. libs/shared: FieldType gains 'group'; FormFieldDefinition gains columns; new schedule.ts and
+     completeness.ts (pure). Run `npm run build -w @mgs/shared` after every change.
+- 2. libs/shared: MG6 declares the group field; bump templateVersion; verification: 'unverified'.
+- 3. apps/web: DynamicForm 'group' branch — a row table with Add Item, delete-with-confirmation.
+- 4. apps/api: group value validation (422), COMPLETENESS_CHECKED audit action, DRAFT_SAVED metadata.
+- 5. tools: orphan-scan learns hasSensitiveMaterial; template-conformance learns 'group'.
+- 6. Verify: `npm run build`, `npm run conformance`, `npm run orphan-scan`, `npm run test:e2e`.
+
+DESIGNATION INDEPENDENCE — the most important rule on this ticket
+- The MG6 designation is disputed and the decision belongs to a decision-maker. This build must NOT
+  wait for it and must NOT depend on it.
+- Therefore: NO behaviour may branch on the form code. Do not write `code === 'MG6'` anywhere for
+  schedule behaviour. The mechanics attach to any template declaring a repeating-group field.
+- If the form is later renamed, or the schedule moves to MG6C/MG6D, the mechanics must move with the
+  field definition and no behaviour code should change.
+
+Shared-Library Rules
+- Reuse the existing type system — do NOT invent a parallel one. Columns are ordinary
+  FormFieldDefinitions restricted to scalar types; no nested groups.
+- Keep schedule.ts and completeness.ts PURE and framework-free — both apps and the tests share one
+  definition of correctness. Thresholds live in completeness.ts, never as literals at call sites.
+- ADDITIVE ONLY: never rename or delete an existing field id — values are already stored under those
+  ids in FormDraft.valuesJson and renaming strands them on the next autosave (1.5s after a keystroke).
+  Run `npm run orphan-scan` before and after any id change.
+- Bump templateVersion on any template whose field set changes.
+- After changing libs/shared you MUST restart the API: the nest watcher does not pick up libs/shared
+  rebuilds, so `npm run dev` needs restarting or the API serves stale templates. The startup log line
+  from the MG11 declaration integrity check confirms a fresh boot.
+
+Backend Rules
+- Reuse existing modules/controllers/services/DTOs/guards/Prisma models — don't duplicate.
+- NO schema migration is needed or wanted. The schedule is one more key in valuesJson.
+- Keep the API contract additive; existing consumers must not break. Reject malformed group values
+  with 422, following the MG11 declaration guard as the precedent for shape enforcement.
+- Audit writes must never break a user action (existing AuditService behaviour).
+
+Frontend Rules
+- Reuse the shared DynamicForm renderer. Do NOT special-case forms in components; if the renderer
+  lacks something, extend the renderer (the MG11 wizard is a shell AROUND it, not a fork — copy that
+  pattern if a shell is needed).
+- Note the date-field lesson: a suffix nested inside another control-flow block does not reach
+  mat-form-field's suffix slot, which is why 'date' has its own top-level @case. Expect the same for
+  any new branch.
+- Preserve every existing data-testid; the E2E suite depends on them. Add new ones for the schedule
+  (add-item, schedule-row, row-delete, renumber-confirm, completeness-advisory).
+- Handle loading/empty/error states; keep AA contrast and visible focus (public-sector context).
+- Design tokens only: apps/web/src/styles/_tokens.scss. Do not hardcode colours. Amber is advisory;
+  RED IS RESERVED FOR UC-07 SENSITIVE MATERIAL — do not use it for the sensitivity chip in this UC.
+
+Correctness Rules specific to this UC — read twice
+- The displayed item number is COMPUTED at render from array position. Never store an ordinal. A
+  stored counter is the defect this UC exists to prevent: it reattaches audit and sensitivity
+  decisions to the wrong material the moment an item is removed mid-schedule.
+- Each row's __id is a random uuid, immutable for the life of the row. Edit and reorder must never
+  regenerate it. Reorder is a first-class operation, not delete-and-re-add.
+- No PII in identifiers — __id must never be derived from a name, reference or file path, because
+  these ids reach audit rows and later storage keys.
+- Deletion prompts for confirmation BEFORE renumbering; cancel is a true no-op.
+- hasSensitiveMaterial is derived, recomputed on every change, and cleared when no sensitive row
+  remains. Never user-editable, never latching.
+- The completeness check is ADVISORY and must never block saving or navigation. Record its outcome to
+  the audit log whether or not it flags — a check that only logs failures cannot prove it ran.
+- Sensitive means MARKED, not PROTECTED. UC-07 owns the actual handling. Do not describe this UC in
+  code comments, UI copy or the PR as making disclosure safe.
+
+Full-Stack Coordination
+- libs/shared IS the contract: the API's DTOs and the client's types are the same exported
+  definitions, so a shape change is one edit reviewed once — never two hand-kept copies.
+- After ANY libs/shared change: rebuild it, restart the API, and curl a template to verify the
+  served field count — tsc emits on type errors and the nest watcher serves stale dists silently
+  (HANDOVER §5).
+- Frontend and backend for a use case land together on the UC branch as one PR; a UI that ships
+  ahead of its endpoint (or the reverse) is half a feature and reviews as one.
+
+Third-Party Integrations
+- None. No new external services, no new credentials.
+
+PR Requirements (target: ali-zulqarnain/mgs-forms)
+- Include: Summary, Changes Made, Testing (which paths, which checks, edge cases), Build Notes.
+- Quote the scope's four Definition of Done lines and show the check that proves each.
+- Checklist: `npm run build` passes (api + web) · no new Angular budget warnings ·
+  `npm run conformance` passes · `npm run orphan-scan` reports zero orphans ·
+  `npm run test:e2e` green · every existing data-testid intact · no `code === 'MG6'` branch for
+  schedule behaviour · test data cleaned from apps/api/prisma/dev.db · targets
+  ali-zulqarnain/mgs-forms.
+
+Ground Rules
+- Stay in scope — no unrelated refactors, no drive-by redesign.
+- MG6D / sensitive-material handling is UC-07. The MG6 designation rename is a decision-maker call.
+  MG6's field-set rebuild from the sourced research is separate work. None of those belong in this PR.
+- Clean up after yourself: any drafts your testing creates must be deleted from
+  apps/api/prisma/dev.db. The user's own drafts must survive.
+- If a decision needs a practitioner or decision-maker, write the question down in
+  docs/usecases/uc-04/open-questions.md and keep going on everything else. Do not block the whole
+  ticket on one unanswered question.

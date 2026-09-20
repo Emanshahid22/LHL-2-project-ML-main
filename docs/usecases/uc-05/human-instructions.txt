@@ -1,0 +1,173 @@
+Full-Stack / Codebase Task — UC-05 Field Validation
+
+Repos (single monorepo; frontend, backend and shared domain package all live here)
+- Monorepo: mgs-forms — https://github.com/consultancy-outfit/LHL-2-project-ML.git — path: /root/mgs-forms
+  - apps/web  Angular 20 (standalone components, signals) + Angular Material
+  - apps/api  NestJS 11 + Prisma (SQLite in dev)
+  - libs/shared  framework-free domain package consumed by BOTH apps — form templates and rules live here
+
+Git Workflow
+- git checkout ali-zulqarnain/mgs-forms && git pull origin ali-zulqarnain/mgs-forms
+- git checkout -b mgs/uc-05-field-validation        # the UC working branch — do the work here
+- implement, commit, then: git push origin mgs/uc-05-field-validation
+- open a PR into ali-zulqarnain/mgs-forms when the epic's Definition of Done is met
+- Per-ticket LER-NNNN branches off the UC branch ONLY if a reviewer asks for a ticket to be reviewed
+  separately; otherwise keep the UC branch as the single unit of review.
+- NOTE: do NOT target the repo's `main`. It holds only a placeholder README and shares no ancestor with
+  this project's history.
+- DEVIATION from the org standard's `<JIRA-TICKET-ID>` branch naming, stated rather than silently
+  contradicted: branches here are `mgs/uc-NN-<slug>` because the USE CASE is the unit of work and
+  review — one epic's stories land as one reviewable branch, and per-ticket LER-NNNN branches are
+  cut off it only when a reviewer asks for one ticket separately.
+
+Read before writing any code
+- docs/usecases/uc-05/epic.md and prd.md — the PRD's mechanism section (§4) and business rules (§8) are
+  the contract. The scope's Definition of Done is quoted verbatim in both.
+- docs/usecases/uc-05/stories/ — one file per ticket, with its Given/When/Then criteria.
+- CLAUDE.md — the nine rules that must not be broken. Rules 1, 3, 6 and 7 all bite on this ticket.
+- docs/usecases/uc-05/prd.md §3 — the table of what ALREADY EXISTS. Do not rebuild any of it.
+- docs/decisions/decision-and-review-memo.md — decisions A1-A4 change which templates exist, and
+  therefore which rules apply. None of them blocks this build.
+
+THE MOST IMPORTANT RULE ON THIS TICKET — never invent a statutory format
+- A criminal case file carries references (URN, ASN, custody number, collar number, CPS reference) whose
+  exact character formats this project has NOT sourced. The research evidences that the BOXES exist. It
+  does not state their formats.
+- A rule that rejects a valid URN is worse than no rule: it teaches a solicitor to work around the product
+  on a document that goes to court.
+- Therefore: a format may be `error` severity ONLY if its provenance is 'documented' AND it carries a real
+  source citation. Everything else is 'advisory' — it hints, it never invalidates a control, it never
+  blocks a save.
+- Enforce this TWICE: in `severityFor()` at runtime (so editing a template cannot bypass it) and in
+  `npm run conformance` (so the mistake fails CI). Both, not either.
+- If you find yourself writing a regex you cannot cite, stop and put the question in
+  docs/usecases/uc-05/open-questions.md instead.
+
+Build Order (shared library first — both apps compile against it)
+- DEVIATION from the org standard's frontend-mocks-first order, stated rather than silently
+  contradicted: the order here is shared engine -> API -> UI, because libs/shared is the single
+  source of truth BOTH apps compile against — the domain types and rules must exist before either
+  app can honestly mock or consume them, and a frontend mocked against guessed types would be
+  rework, not progress.
+- 1. libs/shared: validation.ts (new, pure) — FIELD_FORMATS registry, severityFor, validateFieldValue,
+     crossFieldFindings, validateForm, ValidationFinding. Run `npm run build -w @mgs/shared` after every
+     change.
+- 2. libs/shared: FieldValidation gains format / severity / notBefore / notAfter / requiredWhen; new
+     FieldFormatName, FieldFormatDefinition, FieldDateOrder, FieldRequiredWhen, ValidationSeverity.
+- 3. tools + libs/shared: template-conformance learns the new structural rules, each with a
+     planted-defect self-test. Do this BEFORE declaring rules on templates, so the gate catches your own
+     mistakes as you go.
+- 4. libs/shared: declare the rules on real field ids per PRD §8. Bump templateVersion on every template
+     touched. Additive only.
+- 5. apps/web: derive Angular validators from the shared rule set (one source of truth, not a second
+     hand-written list); render advisory hints; new consistency-issues panel component.
+- 6. apps/api: assertValueTypesStorable() (422) and validation counts in DRAFT_SAVED metadata.
+- 7. Verify: `npm run build`, `npm run conformance`, `npm run orphan-scan`, `npm run test:e2e`.
+
+Shared-Library Rules
+- Reuse the existing type system — do NOT invent a parallel one. A cross-field rule is declared on the
+  FIELD that owns it, so nothing keys off a form code (the same discipline UC-04 used for the schedule).
+- Keep validation.ts PURE and framework-free: both apps and the tests share one definition of validity.
+- Formats live in the registry, never as raw regexes in templates. Seven templates carry a URN box; a bad
+  pattern copied seven times is seven edits and six chances to miss one.
+- ADDITIVE ONLY: never rename or delete an existing field id — values are already stored under those ids
+  in FormDraft.valuesJson and renaming strands them on the next autosave (1.5s after a keystroke).
+  Run `npm run orphan-scan` before and after any id change.
+- After changing libs/shared you MUST restart the API: the nest watcher does not pick up libs/shared
+  rebuilds, so `npm run dev` needs restarting or the API serves stale templates. The startup log line from
+  the MG11 declaration integrity check confirms a fresh boot.
+
+Backend Rules
+- Reuse existing modules/controllers/services/DTOs/guards/Prisma models — don't duplicate.
+- NO schema migration is needed or wanted. Findings are COMPUTED, never stored — a stored finding goes
+  stale the moment a rule is corrected, and these rules will change as formats get sourced.
+- The API rejects what it cannot safely STORE (type shape, 422) and records what is merely WRONG
+  (semantics, audit counts). Do NOT reject a draft save for a semantic rule: a form is invalid for most of
+  the time a human is filling it in, and rejecting would break autosave.
+- Audit metadata carries COUNTS ONLY — never a field value, never a failing string.
+- Audit writes must never break a user action (existing AuditService behaviour).
+- The finalisation gate is what validateForm exists for and is UNREACHABLE until a finalise action exists
+  (UC-10). Write the hook, document it, do not invent an endpoint for it.
+
+Frontend Rules
+- Reuse the shared DynamicForm renderer. Do NOT special-case forms in components; if the renderer lacks
+  something, extend the renderer (the MG11 wizard is a shell AROUND it, not a fork).
+- Angular validators must be DERIVED from the shared rule definitions, not written twice. Only
+  error-severity rules become validators; advisory rules must never invalidate a control.
+- Cross-field findings go in the Consistency Issues panel below the form section, NOT in any field's inline
+  error slot. The scope is explicit about this.
+- Preserve every existing data-testid; the E2E suite depends on them. Add new ones for validation
+  (consistency-issues, validation-hint, format-hint).
+- Handle loading/empty/error states; keep AA contrast and visible focus (public-sector context).
+- Design tokens only: apps/web/src/styles/_tokens.scss. Do not hardcode colour. Amber is advisory; errors
+  use Material's existing error token; RED IS RESERVED FOR UC-07 SENSITIVE MATERIAL — do not introduce a
+  third red in this UC.
+- The panel needs role="status" so findings are announced without stealing focus.
+
+Correctness Rules specific to this UC — read twice
+- Provenance decides severity. A template asking for more severity than its format's provenance permits is
+  overridden at runtime AND fails conformance.
+- A cross-field rule fires only when BOTH operands have values.
+- An `ambiguous` case datum SUPPRESSES the rule and says why. Never pick one of two offence dates to
+  compare against — that produces a confident wrong answer, which is worse than silence.
+- Severity belongs to the RULE, not the field or the form. On MG11's statementDate: earlier than the
+  witness's date of birth is an ERROR (impossible); later than the case hearing date is ADVISORY (a further
+  statement after the first hearing is ordinary practice).
+- Do NOT put a collar-number pattern on the composite officer boxes (MG1/MG3/MG4 officerInCase,
+  MG5/MG16 officerCompleting). Each holds a name, a rank AND a number in one free-text box; a pattern over
+  it would reject correct input. Assert that no such rule exists, so a later well-meaning addition fails.
+- Do NOT add a field so a rule has somewhere to live. Two of the scope's four named formats have no field
+  (CPS reference, collar number). That is a finding to record, not a gap to fill with an invented box.
+- A form with no findings is NOT a verified form. Most templates are `unverified`; the panel must say so.
+- Do NOT switch to provideNativeDateAdapter — Date objects in controls break UC-02's provenance matching
+  and would remove every auto-fill badge.
+
+Full-Stack Coordination
+- libs/shared IS the contract: the API's DTOs and the client's types are the same exported
+  definitions, so a shape change is one edit reviewed once — never two hand-kept copies.
+- After ANY libs/shared change: rebuild it, restart the API, and curl a template to verify the
+  served field count — tsc emits on type errors and the nest watcher serves stale dists silently
+  (HANDOVER §5).
+- Frontend and backend for a use case land together on the UC branch as one PR; a UI that ships
+  ahead of its endpoint (or the reverse) is half a feature and reviews as one.
+
+Third-Party Integrations
+- None. No new external services, no new credentials, no validation libraries — the rules are a few dozen
+  lines of pure TypeScript and belong in libs/shared with everything else.
+
+PR Requirements (target: ali-zulqarnain/mgs-forms)
+- Include: Summary, Changes Made, Testing (which paths, which checks, edge cases), Build Notes.
+- Quote the scope's four Definition of Done lines and show the check that proves each.
+- State explicitly which formats ship advisory and why, so a reviewer can see that nothing was invented.
+- Checklist: `npm run build` passes (api + web) · no new Angular budget warnings ·
+  `npm run conformance` passes (with new self-tests) · `npm run orphan-scan` reports zero orphans ·
+  `npm run test:e2e` green · every existing data-testid intact · no error-severity rule on an unsourced
+  format · no pattern on a composite officer field · test data cleaned from apps/api/prisma/dev.db ·
+  targets ali-zulqarnain/mgs-forms.
+
+Ground Rules
+- Stay in scope — no unrelated refactors, no drive-by redesign.
+- Legal-language advice is UC-06. Sensitive material is UC-07. Whole-form quality review is UC-08.
+  Finalisation is UC-10. None of those belong in this PR.
+- Clean up after yourself: any drafts your testing creates must be deleted from
+  apps/api/prisma/dev.db. The user's own drafts must survive.
+- If a decision needs a practitioner or decision-maker, write the question down in
+  docs/usecases/uc-05/open-questions.md and keep going on everything else. Do not block the whole ticket
+  on one unanswered question — the epic is deliberately designed so that every unsourced format ships
+  advisory, which means NO story is blocked.
+
+================================================================================
+INTENDED DATES (dueDate cannot be set through the API — see open-questions.md)
+================================================================================
+The tasks-ml PUT endpoint silently ignores dueDate, so these are recorded here rather than on the
+tickets. Set them in the DevOps Bot UI if they are wanted. Sequence, not calendar dates, is what matters:
+each stage is independently shippable.
+
+  Stage 1 — engine and the severity gate      LER-1207, 1208            target 2026-08-22
+  Stage 2 — single-field rules and hints      LER-1209 .. LER-1214      target 2026-08-26
+  Stage 3 — cross-field engine and panel      LER-1215 .. LER-1220      target 2026-09-02
+  Stage 4 — server parity                     LER-1221                  target 2026-09-04
+  Stage 5 — Definition of Done checks         LER-1222                  target 2026-09-05
+
+Order matters more than the dates: LER-1207 and LER-1208 must land first, because the severity gate is what makes
+every later format rule safe to ship.

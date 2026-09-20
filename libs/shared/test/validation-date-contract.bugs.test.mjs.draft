@@ -1,0 +1,62 @@
+/**
+ * SUSPECTED BUGS — kept OUT of the green tranche on purpose. Each test here
+ * asserts what the module's own documentation promises and FAILS against the
+ * current dist, pinning a doc/behaviour divergence for a human to rule on.
+ * Rename to .test.mjs only after the library (or its doc comments) is fixed.
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { checkDateLogic, crossFieldFindings } from '../dist/index.js';
+
+const field = (overrides) => ({
+  id: 'field',
+  label: 'Field',
+  type: 'text',
+  required: false,
+  helpText: '',
+  ...overrides,
+});
+
+const template = (fields) => ({
+  code: 'MG5',
+  name: 'Fixture template',
+  description: 'Unit-test fixture',
+  templateVersion: 1,
+  fields,
+});
+
+// BUG 1 (suspected): checkDateLogic's validity pass documents "a date that
+// holds something other than a real ISO date ... is blocking", but the check
+// is shape-only (/^\d{4}-\d{2}-\d{2}$/): '2026-13-45' and '2026-02-31' sail
+// through as clean. Real-world exposure is low while IsoDateAdapter is the
+// only writer, but the API accepts draft values from any client, and a
+// non-date that LOOKS like a date reaches a court document unflagged.
+test('checkDateLogic: an impossible calendar date is blocking (FAILS: shape-only check)', () => {
+  const t = template([field({ id: 'd1', label: 'Date one', type: 'date' })]);
+  const issues = checkDateLogic(t, { d1: '2026-13-45' });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].severity, 'blocking');
+});
+
+// BUG 2 (suspected): ValidationFinding.relatedFieldId is documented as "the
+// other operand — a field id or `case:<path>`", and the suppressed branch
+// honours that ('case:offenceDate'). The FAILED branch assigns the operand's
+// human label instead ('Start date' / "the case file's offenceDate").
+// Knock-on: quality-check derives issue ids as
+// `dateLogic:order:${fieldId}:${relatedFieldId}`, so acknowledgement-bearing
+// ids embed display labels — still deterministic, but a label edit on a
+// template silently changes issue identity.
+test('crossFieldFindings: a failed ordering names the operand FIELD ID (FAILS: label is used)', () => {
+  const t = template([
+    field({ id: 'startDate', label: 'Start date', type: 'date' }),
+    field({
+      id: 'endDate',
+      label: 'End date',
+      type: 'date',
+      validation: { notBefore: { fieldId: 'startDate' } },
+    }),
+  ]);
+  const findings = crossFieldFindings(t, { startDate: '2026-02-02', endDate: '2026-02-01' });
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].relatedFieldId, 'startDate');
+});

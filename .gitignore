@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.angular/
+*.log
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal
+.env
+# dev-only SQLite connection string is intentionally committed
+!apps/api/.env
+# Playwright run artefacts (traces, reports)
+test-results/
+playwright-report/
+blob-report/
+
+# Phase 6 audit walkthrough artefacts (screenshots, video, traces) — not committed
+e2e/audit-artifacts/
+
+# UC-09: encrypted generated documents (dev store; deployed uses the volume)
+apps/api/document-store/
+
+# Release-01: per-run auth state written by e2e/support/global-setup.ts
+e2e/support/.auth-state.json
+e2e/support/.storage-state.json

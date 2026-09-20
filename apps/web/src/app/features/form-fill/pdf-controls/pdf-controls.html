@@ -1,0 +1,95 @@
+<div class="pdf-controls" data-testid="pdf-controls">
+  @switch (state()) {
+    @case ('idle') {
+      <button
+        matButton="filled"
+        type="button"
+        data-testid="generate-pdf"
+        (click)="generate()"
+      >
+        Generate PDF
+      </button>
+    }
+    @case ('generating') {
+      <div class="pdf-progress" data-testid="pdf-progress" role="status">
+        <mat-progress-bar mode="indeterminate" />
+        <span>Generating the document…</span>
+      </div>
+    }
+    @case ('failed') {
+      <!-- Failure never touches the form: the draft is exactly as it was. -->
+      <div class="pdf-failure" role="alert" data-testid="pdf-failure">
+        <span data-testid="pdf-failure-reason">{{ failureReason() }}</span>
+        <button matButton="outlined" type="button" data-testid="pdf-retry" (click)="generate()">
+          Retry
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <div class="pdf-actions">
+        <a
+          matButton="filled"
+          data-testid="pdf-download"
+          [href]="downloadUrl()"
+          download
+        >
+          Download PDF
+        </a>
+        <a
+          matButton="outlined"
+          data-testid="docx-download"
+          [href]="docxUrl()"
+          download
+        >
+          Download as Word
+        </a>
+        <span class="docx-note" data-testid="docx-note">
+          The Word file is a working copy and carries a “Draft — not the authoritative
+          version” header on every page; the PDF is the authoritative output.
+        </span>
+        <button matButton="outlined" type="button" data-testid="pdf-regenerate" (click)="generate()">
+          Regenerate
+        </button>
+      </div>
+      <div class="pdf-preview-toolbar">
+        <span data-testid="pdf-page-count">
+          @if (pageCount(); as pages) {
+            {{ pages }} {{ pages === 1 ? 'page' : 'pages' }}
+          }
+        </span>
+        <div class="zoom-controls">
+          <button
+            matIconButton
+            type="button"
+            aria-label="Zoom out"
+            data-testid="pdf-zoom-out"
+            (click)="zoomOut()"
+          >
+            −
+          </button>
+          <span data-testid="pdf-zoom-level">{{ zoom() }}%</span>
+          <button
+            matIconButton
+            type="button"
+            aria-label="Zoom in"
+            data-testid="pdf-zoom-in"
+            (click)="zoomIn()"
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div class="pdf-preview-frame">
+        <!-- The iframe streams the stored bytes: what is previewed is
+             byte-for-byte what was encrypted and stored. -->
+        <iframe
+          data-testid="pdf-preview"
+          title="Generated PDF preview"
+          [src]="previewSrc()"
+          [style.width.%]="zoom()"
+          [style.height.px]="640"
+        ></iframe>
+      </div>
+    }
+  }
+</div>

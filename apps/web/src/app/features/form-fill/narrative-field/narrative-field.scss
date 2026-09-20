@@ -1,0 +1,165 @@
+// Metrics shared by the textarea and its highlight backdrop. If these ever
+// diverge the two wrap differently and the marks slide off the words, so they
+// are declared once and applied to both.
+$narrative-font-size: 0.95rem;
+$narrative-line-height: 1.55;
+$narrative-padding: 12px 14px;
+
+.narrative-field {
+  display: block;
+}
+
+.narrative-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.required-marker {
+  color: var(--mat-sys-error, #b3261e);
+  margin-left: 2px;
+}
+
+.narrative-help {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+
+// UC-06: statement and assistant side by side at desk widths, stacked below.
+// The narrative keeps the space it needs — a witness statement typed into a
+// narrow column is worse than an assistant that sits underneath it.
+.narrative-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.narrative-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.narrative-assistant {
+  flex: 0 0 300px;
+  max-width: 300px;
+  display: block;
+}
+
+@media (max-width: 1100px) {
+  .narrative-layout {
+    flex-direction: column;
+  }
+  .narrative-assistant {
+    flex: 1 1 auto;
+    max-width: none;
+    width: 100%;
+  }
+}
+
+.narrative-stack {
+  position: relative;
+}
+
+.narrative-backdrop,
+.narrative-input {
+  // Identical text metrics — the alignment depends entirely on this block.
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-size: $narrative-font-size;
+  line-height: $narrative-line-height;
+  letter-spacing: normal;
+  padding: $narrative-padding;
+  border: 1px solid var(--mat-sys-outline-variant, #ccc);
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  tab-size: 4;
+  margin: 0;
+}
+
+// The backdrop sits ON TOP of the textarea so the marks can receive hover for
+// their tooltips. It must therefore be fully transparent — glyphs, background
+// and border alike — and click-through everywhere except on the marks. The
+// border width is kept (transparent) because it contributes to the text origin.
+.narrative-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: transparent;
+  background: transparent;
+  border-color: transparent;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.narrative-input {
+  position: relative;
+  z-index: 1;
+  background: var(--mat-sys-surface, #fff);
+  color: var(--mat-sys-on-surface, #1a1a1a);
+  resize: vertical;
+  min-height: 240px;
+  display: block;
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -1px;
+  }
+}
+
+// Amber underline, non-blocking by design: no background fill, no layout change,
+// nothing that could obscure the witness's own words.
+.narrative-mark {
+  background: transparent;
+  color: transparent;
+  border-bottom: 2px solid #b26a00;
+  // Re-enabled only on the marks so hovering can explain them; mousedown is
+  // forwarded to the textarea so clicking a flagged phrase still moves the caret.
+  pointer-events: auto;
+  cursor: text;
+}
+
+.narrative-mark.kind-opinion {
+  border-bottom-style: dashed;
+}
+
+// UC-06 informal register. Same amber, a third line style, so the three kinds are
+// distinguishable without colour doing the work — and the panel carries the same
+// information as text, so colour is never the only carrier.
+.narrative-mark.kind-informal {
+  border-bottom-style: dotted;
+  border-bottom-width: 3px;
+}
+
+.trailing-guard {
+  color: transparent;
+}
+
+.narrative-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-top: 6px;
+}
+
+.word-count {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.flag-notice {
+  font-size: 0.78rem;
+  color: #8a5200;
+}
+
+.flag-notice.degraded {
+  color: var(--mat-sys-on-surface, #1a1a1a);
+  opacity: 0.7;
+}

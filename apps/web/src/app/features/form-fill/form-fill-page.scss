@@ -1,0 +1,194 @@
+@use 'tokens' as t;
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: var(--mg-blue-600);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 500;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.warning-banner {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--mg-radius-md);
+  border: 1px solid var(--mg-amber-500);
+  background: var(--mg-amber-050);
+  color: var(--mg-amber-700);
+  font-size: 0.9rem;
+}
+
+.case-changed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.autofill-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--mg-radius-md);
+  border: 1px solid var(--mg-blue-500);
+  background: var(--mg-blue-050);
+  color: var(--mg-ink-900);
+  font-size: 0.9rem;
+}
+
+.dismiss-button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 4px;
+  color: inherit;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.form-header {
+  position: sticky;
+  top: 60px;
+  z-index: 5;
+  background: var(--mg-surface-sunken);
+  padding: t.$s3 0;
+  border-bottom: 1px solid var(--mg-border);
+  margin-bottom: t.$s5;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  h1 {
+    font-size: 1.35rem;
+    margin: 0 0 8px;
+  }
+}
+
+.form-code {
+  font-family: monospace;
+  color: var(--mg-blue-600);
+  margin-right: 6px;
+}
+
+.case-chip-link {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.standalone-chip {
+  opacity: 0.75;
+}
+
+.save-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.save-status {
+  font-size: 0.8rem;
+  color: var(--mg-ink-500);
+  min-width: 110px;
+  text-align: right;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+
+  mat-progress-bar {
+    flex: 1;
+  }
+}
+
+.progress-label {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.form-card {
+  max-width: 840px;
+  border-radius: var(--mg-radius-lg);
+  border-color: var(--mg-border);
+  box-shadow: var(--mg-shadow-sm);
+}
+
+.error-panel {
+  border: 1px solid var(--mg-danger-500);
+  border-radius: var(--mg-radius-md);
+  padding: 18px;
+  max-width: 640px;
+  color: var(--mg-danger-700);
+  background: var(--mg-danger-050);
+
+  p {
+    margin-top: 0;
+  }
+}
+
+.spinner-row {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+// UC-03: persistent vulnerable-witness indicator in the form header.
+.vulnerable-chip {
+  --mdc-chip-elevated-container-color: #fff4e5;
+  --mdc-chip-label-text-color: #8a5200;
+  font-weight: 600;
+}
+
+// UC-03 sourcing: an unverified field set must be visible, not decorative.
+.unverified-chip {
+  --mdc-chip-elevated-container-color: var(--mg-amber-050);
+  --mdc-chip-label-text-color: var(--mg-amber-700);
+  font-weight: 600;
+}
+
+/* UC-04 */
+.sensitive-chip {
+  --mdc-chip-label-text-color: #7f1d1d;
+  --mdc-chip-elevated-container-color: #fee2e2;
+  font-weight: 600;
+}
+
+.completeness-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+/* UC-08: the finalised state — read-only, with the UC-09 handoff stub. */
+.finalised-banner {
+  margin: var(--mg-s5) 0;
+  padding: var(--mg-s3) var(--mg-s4);
+  border-radius: var(--mg-radius-sm);
+  background: var(--mg-success-050);
+  color: var(--mg-success-700);
+}

@@ -1,0 +1,69 @@
+@use '@angular/material' as mat;
+@use 'tokens' as t;
+
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+
+  // Point Material's own system tokens at ours so components we do not style
+  // by hand (dialogs, selects, snackbars) inherit the same language.
+  --mat-sys-primary: #{t.$blue-600};
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-surface: #{t.$surface};
+  --mat-sys-on-surface: #{t.$ink-900};
+  --mat-sys-outline-variant: #{t.$border};
+  --mat-sys-surface-container: #{t.$blue-050};
+  --mat-sys-surface-container-lowest: #{t.$surface-sunken};
+  --mat-sys-error: #{t.$danger-500};
+
+  @include t.emit-css-vars;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--mg-surface-sunken);
+  color: var(--mg-ink-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+@include t.emit-accent-classes;
+
+// Public-sector context: focus must always be visible.
+:focus-visible {
+  outline: 2px solid var(--mg-blue-600);
+  outline-offset: 2px;
+}
+
+// Respect a user's reduced-motion preference across the whole app.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* UC-08: Jump-to-field target highlight. Global because the target lives inside
+ * the renderer's encapsulated DOM; applied and removed by the form page. */
+.jump-highlight {
+  outline: 3px solid var(--mg-blue-500);
+  outline-offset: 2px;
+  border-radius: var(--mg-radius-sm);
+}

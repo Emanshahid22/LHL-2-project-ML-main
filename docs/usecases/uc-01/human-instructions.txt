@@ -1,0 +1,143 @@
+Outstanding Human Actions — UC-01 Form Selection & Initiation
+
+IMPORTANT: this file is NOT a build brief. UC-01 is delivered, proven and closed (completion commit
+3cf7644, marker branch mgs/uc-01-form-selection). The equivalent file in docs/usecases/uc-04/ is an
+instruction pack for a coder because UC-04 was authored before it was built. This one lists what a
+HUMAN still has to do for UC-01 — decisions and sign-offs that code cannot supply.
+
+Repo / where things are
+- Monorepo: https://github.com/consultancy-outfit/LHL-2-project-ML.git — path: /root/mgs-forms
+- Pack: docs/usecases/uc-01/ (epic.md, prd.md, stories/, this file, open-questions.md)
+- Scope source of truth: https://lhl-agents.netlify.app/mg-forms-scope/
+- Traceability: docs/acceptance-mapping.md
+- Decision & Review Memo (decisions A1-A6): docs/decisions/decision-and-review-memo.md - see section 4
+
+================================================================================
+1. PRACTITIONER (solicitor) — the critical path
+================================================================================
+
+1.1  VERIFY THE TEMPLATE FIELD SETS  [memo Section B is the agenda for this, form by form]. This is
+     the single biggest outstanding item in the project, and it lands on UC-01 because UC-01 renders
+     the templates and carries the marker.
+     - NO template is currently marked `verification: 'verified'`. Six carry
+       `verification: 'unverified'` (MG3, MG4, MG6, MG12, MG15, MG16) and render a persistent
+       "Unverified template — pending practitioner sign-off" chip on the form header.
+     - MG5 and MG11 carry NO marker at all. They are the quality bar but they are NOT verified either
+       — do not read the absent marker as approval. This is standing decision 4 in docs/HANDOVER.md.
+     - What to do: work through docs/review/mg-field-review.csv per form (~15 min/form). For each
+       field, confirm it is a real box on the current official form, and confirm its label.
+     - Then, and only then, ask an engineer to flip that template's `verification` to 'verified'.
+       Flipping it is a one-line change; deciding it is not.
+
+1.2  ANSWER docs/review/mg-form-summary.csv FIRST (9 rows, ~15 minutes)  [memo A1, A2, A3, A4]. It
+     asks a blunter question than the field review: is each MG code even the right form? Research says
+     MG2 is the Special Measures Assessment and MG14 is the Conditional Caution, which would mean two
+     of the eleven forms in the picker are mislabelled. Answering this before the field review avoids
+     reviewing fields on a form that turns out to be the wrong form.
+
+1.3  CONFIRM THE HELP TEXT IS SAFE TO RELY ON. Every field carries `helpText` shown behind its `?`
+     icon, and much of it was written from official guidance rather than from practice. A solicitor
+     should confirm that no help text advises something wrong.
+
+================================================================================
+2. DECISION-MAKER
+================================================================================
+
+2.1  IS MG1 IN SCOPE?  [memo A1 — full evidence and three options are stated there]. This is a direct
+     conflict inside the scope document and the product cannot resolve it.
+     - The UC-01 Definition of Done says "All 11 MG forms are available and load correctly".
+     - Research found MG1 is not in the current MG suite at all: 0 of 7 fields corroborated, verdict
+       not-usable (docs/mg-form-research-findings.md).
+     - MG1 is currently retained: it is in the picker and it is the fixture form for around 20 E2E
+       assertions.
+     - Decide: keep MG1 (and accept that the picker offers a form that may not exist), or drop it
+       (and accept that "all 11" becomes "all 10" and around 20 fixtures move to another form).
+     - This is why acceptance criterion #1 is recorded as Partial rather than Covered.
+
+2.2  MG2 AND MG14 DESIGNATIONS, AND THE FATE OF THEIR LIVE DRAFTS  [memo A2, A3 — which record one
+     live MG2 draft and three MG14 drafts]. If MG2 becomes the Special
+     Measures Assessment and MG14 the Conditional Caution, their field sets change wholesale. Drafts
+     already exist against the current ids. Run `npm run orphan-scan` BEFORE any such change — it
+     reports exactly what would be stranded and exits 1 if anything would be.
+
+2.3  SHOULD `templateVersion` BE HONOURED? Today a draft records the version it was created against
+     but renders against the current field set (form-fill-page.ts loads by formCode). That is safe
+     only while every template change is additive. Options: honour the recorded version and render
+     old drafts against their own field set, or formally adopt forward-migration. Roadmap item 4.
+
+================================================================================
+3. CLIENT
+================================================================================
+
+3.1  IS THERE A FULLER REQUIREMENTS PACK?  [not in the memo — raise separately]. The work was briefed
+     as "19 UC-01 checks and 33 UC-02
+     checks". The scope document contains four acceptance criteria per use case, not 19 or 33. If a
+     separate acceptance pack exists, docs/acceptance-mapping.md should be re-done against it.
+
+3.2  WHAT DOES "persists across browser sessions" MEAN in DoD #4? Persistence is proven server-side
+     across a reload and a fresh browser context. If the intent is something stronger — offline
+     drafts, or survival without a server round-trip — say so, because that is a different feature.
+
+================================================================================
+4. THE DECISION & REVIEW MEMO — decisions A1-A6
+================================================================================
+
+docs/decisions/decision-and-review-memo.md — 19 August 2026, from Ali Zulqarnain to the project
+decision-maker and Senior Solicitor. Responses were requested by 22 August, because UC-09 binds
+official layouts and cannot safely start while form identities are open. Each item can be answered
+independently; none of them blocks the others.
+
+MEMO DECISIONS THAT LAND ON UC-01. All four form-identity decisions are UC-01 decisions, because
+UC-01 is what puts eleven forms in the picker and renders whichever field sets they carry.
+
+A1  Does the product carry MG1 at all? THE decision for this use case. MG1 is absent from the Home
+    Office register (Criminal Casefiles v2.0, which begins at MG02), absent from DG6 6th ed., and
+    returns zero occurrences in the 2011 Manual of Guidance; none of its 7 fields corroborated. It is
+    in the picker today and is the fixture form for around 20 E2E assertions. This is precisely why
+    acceptance criterion #1 ("All 11 MG forms are available and load correctly") is Partial.
+    Memo options: (a) remove it and amend the criterion; (b) keep it as a clearly-labelled
+    non-statutory local cover sheet; (c) replace the slot with another form.
+    Blocks LER-1031, the sign-off scope, and the UC-09 layout binding for this slot.
+
+A2  MG2 designation. Officially the Special Measures Assessment; our MG2 holds taped-interview
+    content that officially belongs on MG15. The memo records ONE LIVE DRAFT under the current field
+    ids, so run `npm run orphan-scan` before any re-designation — it reports exactly what would be
+    stranded and exits 1 if anything would be. Blocks LER-1032.
+
+A3  MG14 designation. Officially the Conditional Caution; our MG14 holds eyewitness/identification
+    content, which officially belongs on an MG11. The memo records THREE LIVE DRAFTS — same
+    orphan-scan warning. Part of the public research traced to an AI-generated document and was
+    struck, so a genuine blank MG14 is needed before any rebuild. Blocks LER-1037.
+
+A4  Is MG16 one form or two? For UC-01 this is a template-shape question: one template carrying both
+    field sets with relabelled sections, or a split with a new ebc003 template. The same decision
+    governs UC-02's subject-name auto-fill rule — see docs/usecases/uc-02/human-instructions.txt.
+
+CONTEXT — not UC-01 decisions, but worth having in view while answering the four above:
+- A5  MG6 naming (MG6 vs MG6C/MG6D) for the unused material schedule. UC-04's mechanics are
+      designation-independent by design, so nothing is blocked; the printed name must be settled
+      before UC-09 binds layouts.
+- A6  Ratify the delivered stack (Angular 20 + NestJS 11 + Prisma, 122 E2E checks in CI) against the
+      original Python/FastAPI/React plan. Recommended: ratify. Blocks nothing technically.
+
+Section B of the memo is the practitioner review agenda, which is item 1.1 above, form by form.
+
+The repo's own standing record, consistent with the memo:
+- docs/HANDOVER.md §4.1 — unverified forms are visibly marked and never filing-ready.
+- docs/HANDOVER.md §4.2 — additive-only template changes until templateVersion is honoured.
+- docs/HANDOVER.md §4.4 — MG11/MG5 are the quality bar but are not verified.
+- docs/HANDOVER.md §4.5 — amber is advisory; red is reserved for UC-07 sensitive material.
+- docs/HANDOVER.md §4.6 — MG1 retained despite not existing officially.
+- CLAUDE.md rules 1, 3, 5, 6, 7 — invented fields, additive ids, data-testids, colour, dates.
+
+================================================================================
+5. NOT A HUMAN TASK, BUT OUTSTANDING — for the record
+================================================================================
+
+Two tickets in the UC-01 block were never started and are engineering work, not decisions:
+- LER-1017 Pixel-difference test harness — visual regression is currently covered by layout assertions
+  (element visibility and geometry), not by image diffing.
+- LER-1018 Storage-key PII scan — the no-PII-in-identifiers rule is currently held by convention and
+  code review (all ids are cuids) rather than by an automated scan.
+
+Both are listed in open-questions.md as coverage gaps.

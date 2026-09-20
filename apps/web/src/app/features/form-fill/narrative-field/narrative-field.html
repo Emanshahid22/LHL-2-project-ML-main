@@ -1,0 +1,78 @@
+<div class="narrative-field" data-testid="narrative-field" [attr.data-field-id]="field().id">
+  <label class="narrative-label" [attr.for]="field().id">
+    {{ field().label }}
+    @if (field().required) {
+      <span class="required-marker" aria-label="required">*</span>
+    }
+  </label>
+
+  <p class="narrative-help">{{ field().helpText }}</p>
+
+  <!-- UC-06: the narrative and its assistant sit side by side at desk widths and
+       stack on narrower ones. The panel is never allowed to squeeze the statement
+       into a column too narrow to write in. -->
+  <div class="narrative-layout">
+    <div class="narrative-main">
+      <div class="narrative-stack">
+        <!-- Mirrors the textarea's text so the marks land on the right words. The
+             @for is on one line on purpose: a whitespace text node here would shift
+             every following character out of alignment. -->
+        <div class="narrative-backdrop" #backdrop aria-hidden="true" data-testid="narrative-backdrop">@for (seg of segments(); track $index) {@if (seg.flag) {<mark class="narrative-mark" [class]="'narrative-mark kind-' + seg.flag.kind" data-testid="narrative-flag" [attr.data-flag-kind]="seg.flag.kind" [matTooltip]="seg.flag.explanation" matTooltipPosition="above" (mousedown)="focusAt(seg.flag.startIndex, $event)">{{ seg.text }}</mark>} @else {<span>{{ seg.text }}</span>}}<span class="trailing-guard">&#8203;</span></div>
+
+        <textarea
+          #textarea
+          class="narrative-input"
+          [id]="field().id"
+          [formControl]="control()"
+          [rows]="field().rows ?? 14"
+          spellcheck="true"
+          data-testid="narrative-input"
+          (scroll)="onScroll()"
+          (focus)="onNarrativeFocus()"
+        ></textarea>
+      </div>
+
+      <div class="narrative-footer">
+        <span class="word-count" data-testid="narrative-word-count">
+          {{ wordCount() }} {{ wordCount() === 1 ? 'word' : 'words' }}
+        </span>
+
+        @if (detectionFailed()) {
+          <span class="flag-notice degraded" role="status" data-testid="narrative-flags-unavailable">
+            Automated hearsay and opinion flagging is temporarily unavailable — the statement is
+            unaffected and can still be edited and saved.
+          </span>
+        } @else if (flags().length > 0) {
+          <span class="flag-notice" role="status" data-testid="narrative-flag-summary">
+            @if (hearsayCount() > 0) {
+              {{ hearsayCount() }} possible hearsay
+            }
+            @if (hearsayCount() > 0 && opinionCount() > 0) {
+              <span>·</span>
+            }
+            @if (opinionCount() > 0) {
+              {{ opinionCount() }} possible opinion
+            }
+            @if (informalCount() > 0 && (hearsayCount() > 0 || opinionCount() > 0)) {
+              <span>·</span>
+            }
+            @if (informalCount() > 0) {
+              <span data-testid="narrative-informal-count">{{ informalCount() }} informal</span>
+            }
+            — advisory only; you can save and complete the statement as it is.
+          </span>
+        }
+      </div>
+    </div>
+
+    <app-language-assistant
+      class="narrative-assistant"
+      [prompts]="prompts()"
+      [fieldId]="field().id"
+      [canInsert]="panelFocused()"
+      [degraded]="serviceDegraded()"
+      [focused]="panelFocused()"
+      (insert)="insertSuggestion($event)"
+    />
+  </div>
+</div>

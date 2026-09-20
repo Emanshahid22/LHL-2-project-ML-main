@@ -1,0 +1,88 @@
+Full-Stack / Codebase Task — MG Form Template Completion
+
+Repos (single monorepo; frontend, backend and shared domain package all live here)
+- Monorepo: mgs-forms — https://github.com/consultancy-outfit/LHL-2-project-ML.git — path: /root/mgs-forms
+  - apps/web  Angular 20 (standalone components, signals) + Angular Material
+  - apps/api  NestJS 11 + Prisma (SQLite in dev)
+  - libs/shared  framework-free domain package consumed by BOTH apps — the MG form definitions live here
+
+Git Workflow
+- git checkout ali-zulqarnain/mgs-forms && git pull origin ali-zulqarnain/mgs-forms
+- git checkout -b <JIRA-TICKET-ID>          # branch named exactly the ticket id
+- implement, commit, then: git push origin <JIRA-TICKET-ID>
+- open a PR into ali-zulqarnain/mgs-forms
+- NOTE: do NOT target the repo's `main`. It holds only a placeholder README and shares no ancestor
+  with this project's history, so a PR into it needs --allow-unrelated-histories.
+
+Build Order (this ticket is data + guardrails, not FE-then-BE)
+- 1. libs/shared first: field sets in form-templates.ts, type additions in form-template.types.ts,
+     new template-conformance.ts. Run `npm run build -w @mgs/shared` after every change.
+- 2. Then the guards: API DTO surfacing of the verification state, web header indicator.
+- 3. Then the review artifact generator (tools/review-artifact/), which reads the templates.
+- 4. Integrate + verify: `npm run test:e2e` (95 checks today, must stay green).
+
+Shared-Library Rules (most of the work is here)
+- Reuse the existing type system — do NOT invent a parallel one. Fields are FormFieldDefinition;
+  validation goes in the declarative `validation` object; grouping via `section`.
+- Follow the MG11 and MG5 definitions as the quality bar: ~13-15 fields, helpText that tells the
+  user HOW to complete the box (not just what it is), validation on most constrained fields.
+- `mapsTo` only where the case datum genuinely IS the field's value. Precedents to follow: an MG11
+  witness name is not the defendant; MG16 `subjectName` is deliberately unmapped because a s.100
+  notice concerns a non-defendant (see the comment above that field).
+- ADDITIVE ONLY: never rename or delete an existing field id in this ticket — values are already
+  stored under those ids in FormDraft.valuesJson. Add the correct field alongside instead.
+- Bump `templateVersion` on any template whose field set changes.
+- After changing libs/shared you MUST restart the API: the nest watcher does not pick up
+  libs/shared rebuilds, so `npm run dev` needs restarting or the API serves stale templates.
+
+Backend Rules
+- Reuse existing modules/controllers/services/DTOs/guards/Prisma models — don't duplicate.
+- No schema migration is needed or wanted for this ticket.
+- Keep additions additive on the API contract; existing consumers must not break.
+
+Frontend Rules
+- Reuse the shared DynamicForm renderer — do NOT special-case forms in components. If a form needs
+  behaviour the renderer lacks, raise it rather than forking (the MG11 wizard is a shell AROUND the
+  renderer, not a fork, and is the pattern to copy).
+- Preserve every existing data-testid; the E2E suite depends on them.
+- Handle loading/empty/error states; keep AA contrast and visible focus (public-sector context).
+- Design tokens only: apps/web/src/styles/_tokens.scss. Do not hardcode colours.
+
+Where the field sets come from (READ THIS BEFORE WRITING ANY FIELD)
+- The research is already done, sourced and independently verified. Do NOT re-research and do NOT
+  invent fields. Use these files in this repo:
+    * docs/mg-form-research-findings.md — per-form proposed field sets with, for every field, its
+      section, type, required flag, helpText, the evidence behind it and a confidence of
+      documented / likely / guess. Also carries each form's sources and its verification verdict.
+    * docs/review/mg-field-review.csv — the same 253 fields in tabular form.
+    * docs/review/mg-form-summary.csv — per-form verdict and whether the code is even the right form.
+    * docs/answers/LER-1205-designation-mismatches.md — why MG2, MG6 and MG14 are mislabelled.
+- Use the fields marked "documented". Treat "likely" with care. Do NOT carry "guess" fields into a
+  template; list them as open questions instead.
+- Honour the strike lists in the findings document. Some researched fields trace to an AI-generated
+  document rather than a real specimen and must not be used.
+- If this ticket names ONE form, change only that form's template. Leave the other ten alone.
+
+Accuracy Rules (specific to this ticket — read this twice)
+- Do NOT invent form fields. Every field you add must record provenance: documented / likely /
+  inference. If you cannot establish a field, leave it out and list it as an open question.
+- A template you could not verify ships as `verification: 'unverified'` and must be visibly marked.
+  Never present an unverified legal form as filing-ready.
+- MG12 (exhibit list) and MG6 (unused material) are genuinely tabular and the type system has no
+  repeating group. Approximate flatly and leave a comment; do not fake a table.
+
+Third-Party Integrations
+- None for this ticket. No new external services, no new credentials.
+
+PR Requirements (target: ali-zulqarnain/mgs-forms, one PR)
+- Include: Summary, Changes Made, Testing (which forms, which checks, edge cases), Build Notes.
+- Attach the practitioner's marked-up review artifact for any template flipped to `verified`.
+- Checklist: `npm run build` passes (api + web) · no new Angular budget warnings ·
+  `npm run test:e2e` green · every existing data-testid intact · test data cleaned from dev.db ·
+  targets ali-zulqarnain/mgs-forms.
+
+Ground Rules
+- Stay in scope — no unrelated refactors, no drive-by redesign.
+- Clean up after yourself: any drafts your testing creates must be deleted from apps/api/prisma/dev.db.
+- If a decision needs a practitioner, write the question down and keep going on everything else;
+  do not block the whole ticket on one unanswered question.

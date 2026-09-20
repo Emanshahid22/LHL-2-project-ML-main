@@ -1,0 +1,223 @@
+Full-Stack / Codebase Task — UC-06 Legal Language Assistance
+
+Repos (single monorepo; frontend, backend and shared domain package all live here)
+- Monorepo: mgs-forms — https://github.com/consultancy-outfit/LHL-2-project-ML.git — path: /root/mgs-forms
+  - apps/web  Angular 20 (standalone components, signals) + Angular Material
+  - apps/api  NestJS 11 + Prisma (SQLite in dev)
+  - libs/shared  framework-free domain package consumed by BOTH apps — templates, flags and rules live here
+
+Git Workflow
+- git checkout ali-zulqarnain/mgs-forms && git pull origin ali-zulqarnain/mgs-forms
+- git checkout -b mgs/uc-06-legal-language        # the UC working branch — do the work here
+- implement, commit, then: git push origin mgs/uc-06-legal-language
+- open a PR into ali-zulqarnain/mgs-forms when the epic's Definition of Done is met
+- Per-ticket LER-NNNN branches off the UC branch ONLY if a reviewer asks for a ticket to be reviewed
+  separately; otherwise keep the UC branch as the single unit of review.
+- NOTE: do NOT target the repo's `main`. It holds only a placeholder README and shares no ancestor with
+  this project's history.
+- DEVIATION from the org standard's `<JIRA-TICKET-ID>` branch naming, stated rather than silently
+  contradicted: branches here are `mgs/uc-NN-<slug>` because the USE CASE is the unit of work and
+  review — one epic's stories land as one reviewable branch, and per-ticket LER-NNNN branches are
+  cut off it only when a reviewer asks for one ticket separately.
+
+Read before writing any code
+- docs/usecases/uc-06/epic.md and prd.md — the PRD's mechanism section (§4), the service boundary (§5)
+  and the business rules (§8) are the contract. The scope's Definition of Done is quoted verbatim in both.
+- docs/usecases/uc-06/stories/ — one file per ticket, with its Given/When/Then criteria.
+- CLAUDE.md — the nine rules that must not be broken. Rules 1, 3, 5 and 6 all bite on this ticket.
+- docs/usecases/uc-06/prd.md §3 — the table of what ALREADY EXISTS from UC-03. Do not rebuild any of it.
+- libs/shared/src/lib/narrative-flags.ts — UC-03's detector. UC-06 EXTENDS this file; it does not replace
+  it, and its five existing patterns must behave identically afterwards.
+- apps/web/src/app/shared/dynamic-form/consistency-issues.ts — the closest precedent for the panel: an
+  advisory side panel that states its own limits.
+
+THE MOST IMPORTANT RULE ON THIS TICKET — never invent phrasing
+- A suggestion is drafting advice on a court document. If a user presses Insert, the wording becomes the
+  witness's signed words. That is a materially worse failure than an invented form field, because a field
+  is visibly empty and a phrase is not.
+- Therefore: a prompt may carry `insertText` ONLY when its provenance is 'documented' AND it carries a real
+  source citation. Anything less may still OBSERVE ("this reads informally") but may not PROPOSE wording.
+- Enforce this TWICE: in `canProposeVerbatim()` at runtime (so a registry edit cannot bypass it) and in
+  `npm run conformance` (so the mistake fails CI). Both, not either — the UC-05 pattern.
+- `STANDARD_PHRASES` therefore SHIPS EMPTY. The scope asks for standard phrasing and supplies none.
+  Shipping the shape, the gate and the tests with an empty registry is the deliverable; writing plausible
+  courtroom wording to fill it is the one thing this ticket must not do. See open-questions.md Q1.
+- If you find yourself writing a phrase you cannot cite, stop and put the question in
+  docs/usecases/uc-06/open-questions.md instead.
+
+THE SECOND RULE — nothing is ever auto-applied
+- The narrative control's value may change in exactly ONE place: the Insert handler. No debounce, no
+  "helpful" normalisation, no auto-formatting, no fix-all.
+- This gets two checks, not one: a behavioural check (render prompts, wait, assert the value is
+  byte-identical) and a source-level check that only the Insert handler writes the control — the shape
+  UC-02's case-write-path guard uses. The behavioural test proves today's build; the structural one
+  protects the guarantee from the next refactor.
+
+Build Order (shared library first — both apps compile against it)
+- 1. libs/shared: narrative-flags.ts — `NarrativeFlagKind` gains 'informal', `NarrativePattern` gains
+     `suggestion?`. Additive; run `npm run build -w @mgs/shared` and confirm UC-03's checks still pass
+     BEFORE going further.
+- 2. libs/shared: language-assistance.ts (new, pure) — `AssistancePrompt`, `AssistanceKind`,
+     `INFORMAL_PATTERNS`, `STANDARD_PHRASES` (empty), `COMPLETENESS_HINTS`, `assistancePrompts()`,
+     `canProposeVerbatim()`.
+- 3. libs/shared: `narrative?: true` on `FormFieldDefinition`; declare it on MG11 `statementText` and MG5
+     `summaryOfCircumstances`, `keyEvidence`, `defendantInterview`, `injuriesLoss`. NOT on
+     `witnessAddress`, NOT on `chargesList`. Bump `templateVersion` on MG5 and MG11.
+- 4. tools + libs/shared: template-conformance learns the new structural rules (narrative only on a
+     textarea; insertText requires documented + source), each with a planted-defect self-test. Do this
+     BEFORE the panel, so the gate catches your own mistakes as you go.
+- 5. apps/web: lift `NarrativeField` into the DynamicForm textarea branch (declared narratives only). This
+     is the biggest single piece — see the note below. Prove MG11 is unchanged before touching MG5.
+- 6. apps/web: the `app-language-assistant` panel — prompt list, Insert, Dismiss, collapse.
+- 7. apps/web: `insertAtCursor` on the narrative component; wire Insert; report the insertion.
+- 8. apps/api: `LANGUAGE_SUGGESTION_INSERTED` audit action; `POST /api/drafts/:id/language-insert` → 204.
+- 9. apps/api: the optional `language` module behind `LANGUAGE_ASSIST_URL`, with the write-path guard test.
+- 10. Verify: `npm run build`, `npm run conformance`, `npm run orphan-scan`, `npm run test:e2e`.
+
+The biggest piece, called out because it is easy to under-scope
+- `NarrativeField` today is referenced ONLY from mg11-wizard.html. MG5's narratives go through the flat
+  DynamicForm and have NO highlighting at all. The DoD names MG5 AND MG11, so step 5 is engine work in the
+  shared renderer, not panel work.
+- ONE component, TWO entry points: the wizard keeps passing it explicitly, the renderer picks it up from
+  the declared flag. Do NOT fork it — a second copy means every future fix has to be made twice.
+- Expect a control-flow surprise like the date-suffix one: a component nested inside another @if/@switch
+  branch does not always reach the slot you expect inside mat-form-field. Give the new branch its own check.
+
+Build Order (shared library first — both apps compile against it)
+- DEVIATION from the org standard's frontend-mocks-first order, stated rather than silently
+  contradicted: the order here is shared engine -> API -> UI, because libs/shared is the single
+  source of truth BOTH apps compile against — the domain types and rules must exist before either
+  app can honestly mock or consume them, and a frontend mocked against guessed types would be
+  rework, not progress.
+- 1. libs/shared: language-assistance.ts (new, pure) — patterns, prompts, the canProposeVerbatim
+     gate, insertAtCursor; narrative-flags.ts EXTENDED with the 'informal' kind (UC-03's five
+     patterns byte-identical). Run `npm run build -w @mgs/shared` after every change.
+- 2. tools + libs/shared: conformance learns the assistance registries, planted defects both ways.
+- 3. apps/api: the isolated language module (no draft write path) + the language-insert audit
+     endpoint (records, never modifies).
+- 4. apps/web: NarrativeField into the shared renderer for declared narratives; the assistant panel;
+     the single insertSuggestion write site.
+- 5. Verify: `npm run build`, `npm run conformance`, `npm run orphan-scan`, `npm run test:e2e`.
+
+Shared-Library Rules
+- Reuse the existing type system — do NOT invent a parallel one. A narrative is declared on the FIELD, so
+  nothing keys off a form code (the discipline UC-04 used for `group` and UC-05 for validation rules).
+- Keep language-assistance.ts PURE and framework-free: browser, API and tests share one definition.
+- ADDITIVE ONLY: never rename or delete an existing field id — values are already stored under those ids in
+  FormDraft.valuesJson and renaming strands them on the next autosave (1.5s after a keystroke).
+  Run `npm run orphan-scan` before and after any id change.
+- After changing libs/shared you MUST restart the API: the nest watcher does not pick up libs/shared
+  rebuilds, so `npm run dev` needs restarting or the API serves stale templates. The MG11 declaration
+  integrity line in the startup log confirms a fresh boot.
+- Do NOT touch the MG11 statutory declaration constant or its hash. It is unrelated to this UC and the API
+  refuses to boot on a mismatch.
+
+Backend Rules
+- Reuse existing modules/controllers/services/DTOs/guards/Prisma models — don't duplicate.
+- NO schema migration is needed or wanted. Prompts are COMPUTED, never stored — a stored prompt goes stale
+  the moment a pattern is corrected, and these patterns will change as phrasing gets sourced.
+- The insert endpoint RECORDS and does not modify the draft. The narrative reaches the server by the normal
+  autosave PATCH, unchanged. Do not add a second write path for narrative text.
+- Audit metadata carries `{ fieldId, promptId, kind }` ONLY — never the narrative text, never the inserted
+  wording. Assert it: read the row back and assert the text does not appear in it.
+- Audit writes must never break a user action (existing AuditService behaviour). If the audit write fails,
+  the insertion still stands and the user is told nothing.
+- The assistance module has NO Prisma client, NO DraftsService, NO route that mutates a draft. Everything
+  it returns is untrusted: validate the shape, strip unattributable wording, drop malformed prompts, keep
+  the rest. Short timeout, response size cap, no retries, empty list on any failure, never 5xx.
+
+Frontend Rules
+- Reuse the shared DynamicForm renderer. Do NOT special-case forms in components; if the renderer lacks
+  something, extend the renderer (the MG11 wizard is a shell AROUND it, not a fork).
+- The panel is `role="complementary"` and labelled; new prompts are announced politely, never assertively.
+  It must NEVER steal focus from the narrative — a panel that grabs focus mid-sentence is worse than none.
+- Insert splices at `selectionStart`. Appending at the end is the easy implementation and the wrong one —
+  the scope says "at the cursor position". No cursor (never focused) → Insert disabled, not guessed.
+- Prompt text from the service is rendered as TEXT, never as markup.
+- Preserve every existing data-testid; the E2E suite depends on them. Add new ones for this UC
+  (language-assistant, assistance-prompt, assistance-insert, assistance-dismiss).
+- Handle loading/empty/error states; keep AA contrast and visible focus (public-sector context).
+- Design tokens only: apps/web/src/styles/_tokens.scss. Do not hardcode colour. Amber is advisory;
+  RED IS RESERVED FOR UC-07 SENSITIVE MATERIAL — do not introduce a red in this UC at all.
+- Colour is never the only carrier: every amber mark in the text has a text equivalent in the panel.
+
+Correctness Rules specific to this UC — read twice
+- Provenance decides whether a suggestion can propose wording at all. `insertText` without
+  'documented' + source is stripped at runtime AND fails conformance.
+- Not every textarea is a narrative. MG11 `witnessAddress` and MG5 `chargesList` are textareas that are NOT
+  prose. Do not infer prose from `type === 'textarea'` or from `rows`.
+- Completeness hints do NOT fire on an empty narrative. An unstarted statement is not an incomplete one,
+  and firing on a blank field trains users to ignore the panel — the reasoning UC-04 applied to its
+  sparse-schedule advisory.
+- The scope gives exactly ONE completeness hint ("You have not recorded the time of the incident"). That
+  one is 'documented', cited to the scope. Siblings (date, place, who was present) are 'inference' and are
+  observations only. Do NOT build a checklist of "required narrative content" — no source defines one.
+- Dismissal is per SESSION and is not persisted. Persisting it would silently hide a prompt from a
+  colleague who opens the same draft later and never made that decision.
+- A narrative with no prompts is NOT an approved narrative. The panel must say the assistant only checks
+  the patterns it has been given and is not a review of the statement.
+- Degradation is SILENCE, and that includes the console. "No errors surfaced to user" is literal; zero
+  console errors is asserted.
+- Nothing here blocks. No prompt invalidates a control, affects required-field progress, or gates a wizard
+  step. A witness may genuinely have said something informal, and a form that refused to record it would be
+  useless.
+
+Third-Party Integrations
+- The scope names a "language AI service" without naming one. UC-06 ships the BOUNDARY, not a vendor:
+  with `LANGUAGE_ASSIST_URL` unset the module is not registered and the panel works from the in-process
+  rules alone. That is the default and it must be a working default.
+- Do NOT add a vendor SDK, a model API key, or an outbound call to a hosted model in this PR. Narrative
+  text is a witness's account — sending it to a third party is a decision-maker question, not an
+  implementation choice. See open-questions.md Q6.
+- No new npm dependency should be needed. The rules are pure TypeScript in libs/shared.
+
+Full-Stack Coordination
+- libs/shared IS the contract: the API's DTOs and the client's types are the same exported
+  definitions, so a shape change is one edit reviewed once — never two hand-kept copies.
+- After ANY libs/shared change: rebuild it, restart the API, and curl a template to verify the
+  served field count — tsc emits on type errors and the nest watcher serves stale dists silently
+  (HANDOVER §5).
+- Frontend and backend for a use case land together on the UC branch as one PR; a UI that ships
+  ahead of its endpoint (or the reverse) is half a feature and reviews as one.
+
+PR Requirements (target: ali-zulqarnain/mgs-forms)
+- Include: Summary, Changes Made, Testing (which paths, which checks, edge cases), Build Notes.
+- Quote the scope's four Definition of Done lines and show the check that proves each.
+- State explicitly that `STANDARD_PHRASES` ships empty and why, so a reviewer sees that nothing was
+  invented, and point at the open question that fills it.
+- Checklist: `npm run build` passes (api + web) · no new Angular budget warnings ·
+  `npm run conformance` passes (with new self-tests) · `npm run orphan-scan` reports zero orphans ·
+  `npm run test:e2e` green · UC-03's hearsay/opinion checks still green · every existing data-testid
+  intact · no insertable wording without a source · no draft write path in the assistance module ·
+  no red introduced · test data cleaned from apps/api/prisma/dev.db · targets ali-zulqarnain/mgs-forms.
+
+Ground Rules
+- Stay in scope — no unrelated refactors, no drive-by redesign.
+- Whole-form review and scoring is UC-08. Sensitive material is UC-07. PDF is UC-09. Finalisation and
+  archive are UC-10. None of those belong in this PR.
+- Translation, plain-English rewriting of a whole narrative and tone scoring are all out of scope. So is
+  any bulk-apply affordance — "fix all" is auto-application wearing a hat.
+- Clean up after yourself: any drafts your testing creates must be deleted from apps/api/prisma/dev.db.
+  The user's own drafts must survive.
+- If a decision needs a practitioner or decision-maker, write the question down in
+  docs/usecases/uc-06/open-questions.md and keep going on everything else. NO story is blocked by an
+  unanswered question — the epic is deliberately shaped so that unsourced phrasing simply does not ship as
+  a proposal, and every other behaviour lands regardless.
+
+================================================================================
+INTENDED DATES (dueDate cannot be set through the API — see open-questions.md)
+================================================================================
+The tasks-ml endpoints silently ignore dueDate, so these are recorded here rather than on the tickets. Set
+them in the DevOps Bot UI if they are wanted. Sequence, not calendar dates, is what matters: each stage is
+independently shippable.
+
+  Stage 1 — declared narratives + the renderer lift    stories 01-02 (LER-1223..LER-1224)      target 2026-08-27
+  Stage 2 — the panel and its three prompt sources     stories 03-06 (LER-1225..LER-1228)      target 2026-09-03
+  Stage 3 — insert, audit, and the two guarantees      stories 07-10 (LER-1229..LER-1232)      target 2026-09-09
+  Stage 4 — the service boundary and degradation       stories 11-13 (LER-1233..LER-1235)      target 2026-09-14
+  Stage 5 — accessibility and Definition of Done       stories 14-15 (LER-1236..LER-1237)      target 2026-09-16
+
+Order matters more than the dates. Stage 1 must land first: until narratives are declared and the renderer
+honours the declaration, there is nowhere for the panel to attach on MG5 — which is half of DoD line 1.
+Within stage 3, story 09 / LER-1231 ("Nothing is ever auto-applied") should be written as a check BEFORE Insert is
+implemented, so the guarantee is proven by a test that could have failed.

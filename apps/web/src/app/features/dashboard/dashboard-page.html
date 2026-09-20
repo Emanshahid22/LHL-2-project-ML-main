@@ -1,0 +1,226 @@
+<!-- Hero band. Every figure here is a real count from the API — no derived
+     scores, no percentages of nothing. -->
+<section class="hero" data-testid="dashboard-hero">
+  <div class="hero-copy">
+    <h1>MG Forms workspace</h1>
+    <p>Complete and manage the MG forms that make up a police case file.</p>
+  </div>
+
+  <div class="hero-stats" data-testid="hero-stats">
+    <div class="stat-tile" data-testid="stat-in-progress">
+      <span class="stat-icon"><app-icon name="edit" [size]="18" /></span>
+      <span class="stat-body">
+        <span class="stat-value">{{ stats().inProgress ?? '—' }}</span>
+        <span class="stat-label">In progress</span>
+      </span>
+    </div>
+    <div class="stat-tile" data-testid="stat-cases">
+      <span class="stat-icon"><app-icon name="folder" [size]="18" /></span>
+      <span class="stat-body">
+        <span class="stat-value">{{ stats().cases ?? '—' }}</span>
+        <span class="stat-label">Your cases</span>
+      </span>
+    </div>
+    <div class="stat-tile" data-testid="stat-forms">
+      <span class="stat-icon"><app-icon name="document" [size]="18" /></span>
+      <span class="stat-body">
+        <span class="stat-value">{{ stats().forms ?? '—' }}</span>
+        <span class="stat-label">Available forms</span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- UC-01 entry point comes first: starting a form is the primary action, so it
+     stays above the fold however many drafts accumulate below. -->
+<section class="dashboard-section" data-testid="form-picker">
+  <header class="section-head">
+    <h2>
+      Start a new MG form
+      @if (templates(); as forms) {
+        <span class="section-count">· {{ forms.length }}</span>
+      }
+    </h2>
+  </header>
+
+  @if (templatesError()) {
+    <div class="error-panel">
+      <p>The form templates could not be loaded.</p>
+      <button matButton="filled" type="button" (click)="loadTemplates()">Retry</button>
+    </div>
+  } @else if (templates(); as forms) {
+    <div class="form-grid">
+      @for (form of forms; track form.code) {
+        <mat-card
+          appearance="outlined"
+          class="form-card"
+          [class]="'form-card ' + visualFor(form.code).accent"
+          tabindex="0"
+          role="button"
+          [attr.data-form-code]="form.code"
+          (click)="pickForm(form)"
+          (keydown.enter)="pickForm(form)"
+        >
+          <span class="card-top">
+            <span class="card-plate"><app-icon [name]="visualFor(form.code).icon" [size]="19" /></span>
+            <span class="card-code">{{ form.code }}</span>
+          </span>
+          <span class="card-name">{{ form.name }}</span>
+          <span class="card-desc" [matTooltip]="form.description" matTooltipShowDelay="350">
+            {{ form.description }}
+          </span>
+        </mat-card>
+      }
+    </div>
+  } @else {
+    <div class="spinner-row"><mat-spinner diameter="32" /></div>
+  }
+</section>
+
+<!-- The work queue: resume anything already started. -->
+<section class="dashboard-section" data-testid="in-progress">
+  <header class="section-head">
+    <h2>
+      In progress
+      @if (draftRows().length > 0) {
+        <span class="section-count">· {{ draftRows().length }}</span>
+      }
+    </h2>
+
+    @if (draftRows().length > 0) {
+      <div class="queue-toolbar">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
+          <mat-label>Filter</mat-label>
+          <input
+            matInput
+            type="text"
+            data-testid="drafts-filter"
+            placeholder="Code, form, URN or defendant"
+            [value]="draftFilter()"
+            (input)="setDraftFilter($any($event.target).value)"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="sort-field">
+          <mat-label>Sort</mat-label>
+          <mat-select
+            data-testid="drafts-sort"
+            [value]="draftSort()"
+            (valueChange)="draftSort.set($event)"
+          >
+            <mat-option value="recent" data-testid="drafts-sort-recent">Last saved</mat-option>
+            <mat-option value="code" data-testid="drafts-sort-code">Form code</mat-option>
+            <mat-option value="case" data-testid="drafts-sort-case">Case</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    }
+  </header>
+
+  @if (drafts()) {
+    @if (draftRows().length === 0) {
+      <p class="empty-state" data-testid="drafts-empty">
+        Nothing in progress — pick a form above to get started.
+      </p>
+    } @else if (filteredRows().length === 0) {
+      <p class="empty-state" data-testid="drafts-no-matches">No drafts match your filter.</p>
+    } @else {
+      <div class="draft-list">
+        @for (row of visibleRows(); track row.draft.id) {
+          <!-- The row is one anchor (so it stays a full-row link and existing
+               selectors hold); Continue is a sibling button, never nested. -->
+          <div class="queue-row" [class]="'queue-row ' + row.visual.accent">
+            <a class="draft-row" [routerLink]="['/drafts', row.draft.id]">
+              <span class="row-plate"><app-icon [name]="row.visual.icon" [size]="18" /></span>
+
+              <span class="row-identity">
+                <span class="draft-code">{{ row.draft.formCode }}</span>
+                <span class="draft-name">{{ row.formName }}</span>
+              </span>
+
+              <span class="draft-case">
+                @if (row.caseLabel) {
+                  <mat-chip-set>
+                    <mat-chip>{{ row.caseLabel }}</mat-chip>
+                  </mat-chip-set>
+                } @else {
+                  <mat-chip-set>
+                    <mat-chip class="standalone-chip">Standalone</mat-chip>
+                  </mat-chip-set>
+                }
+              </span>
+
+              @if (row.requiredTotal > 0) {
+                <span
+                  class="draft-progress"
+                  [class.is-complete]="row.requiredDone === row.requiredTotal"
+                >
+                  <span class="meter">
+                    <span class="meter-fill" [style.width.%]="row.requiredPercent"></span>
+                  </span>
+                  <span class="meter-text">
+                    {{ row.requiredDone }} of {{ row.requiredTotal }} required · {{ row.requiredPercent }}%
+                  </span>
+                </span>
+              }
+
+              <span class="draft-saved" [matTooltip]="row.draft.updatedAt | date: 'd MMM y, HH:mm'">
+                {{ row.savedRelative }}
+              </span>
+            </a>
+
+            <button
+              matButton="outlined"
+              type="button"
+              class="continue-button"
+              data-testid="draft-continue"
+              [attr.aria-label]="'Continue ' + row.draft.formCode + ' — ' + row.formName"
+              (click)="continueDraft(row)"
+            >
+              Continue
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (filteredRows().length > pageSize) {
+        <div class="queue-footer">
+          <button
+            matButton
+            type="button"
+            data-testid="drafts-view-all"
+            (click)="toggleDraftsExpanded()"
+          >
+            @if (draftsExpanded()) {
+              Show fewer
+            } @else {
+              View all ({{ filteredRows().length }})
+            }
+          </button>
+        </div>
+      }
+    }
+  } @else {
+    <div class="spinner-row"><mat-spinner diameter="32" /></div>
+  }
+</section>
+
+@if (cases(); as myCases) {
+  @if (myCases.length > 0) {
+    <section class="dashboard-section" id="cases" data-testid="case-list">
+      <header class="section-head">
+        <h2>Your cases <span class="section-count">· {{ myCases.length }}</span></h2>
+      </header>
+      <div class="draft-list">
+        @for (c of myCases; track c.id) {
+          <a class="draft-row case-row" [routerLink]="['/cases', c.id]">
+            <span class="case-avatar" aria-hidden="true">{{ c.defendantName.charAt(0) }}</span>
+            <span class="draft-code case-urn">{{ c.urn }}</span>
+            <span class="draft-name">{{ c.defendantName }}</span>
+            <span class="draft-saved case-offence">{{ c.offenceSummary }}</span>
+          </a>
+        }
+      </div>
+    </section>
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "formCode": "MG1",
+  "templateVersion": 2,
+  "layout": {
+    "id": "clean-a4",
+    "version": 2
+  },
+  "fixture": "Nadia Kowalczyk · 07ST0990011/26 (frozen, e2e/FIXTURES.md)",
+  "font": "MGS Render Serif = DejaVu Serif Book/Bold, EMBEDDED via libs/shared/assets/fonts (deviation 12 resolution: PR #194 CI drifted 1-4% on every baseline because `serif` resolved to a different system face on ubuntu-latest; renders are now font-self-contained)",
+  "capturedOn": "ubuntu-latest (ubuntu24 20260823.283.1), workflow run 32888319061",
+  "selfReferentOnly": true,
+  "claim": "self-referent drift gate only — no genuine specimen exists for this form; no fidelity claim"
+}

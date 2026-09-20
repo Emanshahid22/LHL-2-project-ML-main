@@ -1,0 +1,157 @@
+@if (active()) {
+  <section
+    class="sensitive-section"
+    data-testid="sensitive-section"
+    [attr.data-state]="!permitted() ? 'locked' : isUnlocked() ? 'unlocked' : 'unconfirmed'"
+    aria-labelledby="sensitive-banner-title"
+  >
+    <!-- LER-1241: the banner renders in EVERY state — locked included. -->
+    <div class="sensitive-banner" data-testid="sensitive-banner" role="alert">
+      <span class="banner-glyph" aria-hidden="true">⛔</span>
+      <span class="banner-text" id="sensitive-banner-title">Sensitive — Restricted Access</span>
+    </div>
+
+    @if (!section()) {
+      <!-- Freshly activated, not yet saved: the server block arrives with the
+           next save. Nothing is guessed about permissions in the meantime. -->
+      <p class="sensitive-pending" data-testid="sensitive-pending">
+        Sensitive material has just been recorded. Save to activate the MG6D handling section.
+      </p>
+    } @else if (!permitted()) {
+      <!-- LER-1252/1253: locked. The content is not hidden — it was never sent. -->
+      <div class="sensitive-locked" data-testid="sensitive-locked">
+        <p class="locked-title">This section is locked.</p>
+        <p class="locked-detail" data-testid="sensitive-permission-level">
+          Viewing and completing the sensitive material schedule requires the
+          <strong>{{ section()!.requiredPermissionLevel }}</strong> permission level.
+        </p>
+        <p class="locked-detail" data-testid="sensitive-permission-holders">{{ holdersLine() }}</p>
+        @if (section()!.sensitiveItemCount > 0) {
+          <p class="locked-detail" data-testid="sensitive-locked-count">
+            The schedule currently holds {{ section()!.sensitiveItemCount }}
+            {{ section()!.sensitiveItemCount === 1 ? 'item' : 'items' }}, entered by a colleague
+            with access.
+          </p>
+        }
+      </div>
+    } @else {
+      <!-- LER-1242: the mandatory handling instructions — server-owned wording,
+           rendered read-only (no input element anywhere in this block). -->
+      <div class="handling-instructions" data-testid="handling-instructions">
+        <h4 class="block-title">Mandatory handling instructions</h4>
+        <ol class="instruction-list">
+          @for (line of section()!.handlingInstructions ?? []; track $index) {
+            <li class="instruction">
+              <span class="instruction-text">{{ line.text }}</span>
+              <span class="instruction-source" data-testid="instruction-source">{{ line.source }}</span>
+            </li>
+          }
+        </ol>
+        <p class="instruction-notice" data-testid="handling-notice">{{ section()!.handlingNotice }}</p>
+      </div>
+
+      @if (!isUnlocked()) {
+        <!-- LER-1243: the explicit affirmative step. Until it is taken, the
+             schedule below is a read-only preview and no form control exists. -->
+        @for (preview of previewRows(); track preview.field.id) {
+          @if (preview.rows.length > 0) {
+            <div class="sensitive-preview" data-testid="sensitive-preview">
+              <h4 class="block-title">{{ preview.field.label }} (read-only until confirmed)</h4>
+              <table class="preview-table">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    @for (column of preview.columns; track column.id) {
+                      <th scope="col">{{ column.label }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (cells of preview.rows; track $index) {
+                    <tr data-testid="sensitive-preview-row">
+                      <td>{{ $index + 1 }}</td>
+                      @for (cell of cells; track $index) {
+                        <td>{{ cell }}</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        <div class="confirm-gate" data-testid="sensitive-confirm-gate">
+          <mat-checkbox
+            data-testid="sensitive-read-checkbox"
+            [checked]="readConfirmed()"
+            (change)="readConfirmed.set($event.checked)"
+          >
+            I have read and understood the handling instructions above.
+          </mat-checkbox>
+          <button
+            matButton="filled"
+            type="button"
+            class="confirm-button"
+            data-testid="sensitive-confirm"
+            [disabled]="!readConfirmed() || confirming()"
+            (click)="confirm()"
+          >
+            {{ confirming() ? 'Recording…' : 'Confirm and unlock editing' }}
+          </button>
+          @if (confirmError(); as msg) {
+            <p class="confirm-error" role="alert" data-testid="sensitive-confirm-error">{{ msg }}</p>
+          }
+          <p class="confirm-note">
+            Confirmation is recorded with your identity and required on every access to this
+            section — not once per session.
+          </p>
+        </div>
+      } @else {
+        <!-- LER-1246/1247: the PII reminder panel, alongside the now-editable
+             schedule that the form renders below this block. -->
+        <aside class="pii-panel" data-testid="pii-panel" aria-label="Public Interest Immunity reminder">
+          <h4 class="block-title">Public Interest Immunity — the recorded steps</h4>
+          <ol class="pii-steps">
+            @for (step of section()!.piiSteps ?? []; track $index) {
+              <li class="pii-step" data-testid="pii-step">
+                <span class="instruction-text">{{ step.text }}</span>
+                <span class="instruction-source">{{ step.source }}</span>
+              </li>
+            }
+          </ol>
+          @if (section()!.practiceDirection; as pd) {
+            <a
+              class="pii-link"
+              data-testid="practice-direction-link"
+              [href]="pd.url"
+              target="_blank"
+              rel="noopener"
+            >{{ pd.label }}</a>
+            <p class="pii-link-note">
+              The exact practice direction governing PII procedure is an open question for a
+              practitioner (uc-07 Q1); this links the official rules index.
+            </p>
+          }
+          <div class="pii-ack">
+            @if (piiAcknowledged()) {
+              <span class="pii-acked" data-testid="pii-acknowledged">
+                PII reminder acknowledged — recorded against your identity for this form.
+              </span>
+            } @else {
+              <button
+                matButton="outlined"
+                type="button"
+                data-testid="pii-acknowledge"
+                [disabled]="acknowledgingPii()"
+                (click)="acknowledgePii()"
+              >
+                {{ acknowledgingPii() ? 'Recording…' : 'Acknowledge the PII steps' }}
+              </button>
+            }
+          </div>
+        </aside>
+      }
+    }
+  </section>
+}

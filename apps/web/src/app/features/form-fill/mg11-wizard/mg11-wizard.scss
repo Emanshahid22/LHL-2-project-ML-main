@@ -1,0 +1,149 @@
+.wizard {
+  display: block;
+}
+
+.step-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.step-head {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.step-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--mat-sys-surface-container-lowest, #fafafa);
+  border: 1px solid var(--mat-sys-outline-variant, #ddd);
+  border-top: 3px solid var(--mat-sys-outline-variant, #ddd);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+}
+
+.step-head.is-current .step-button {
+  border-top-color: var(--mat-sys-primary);
+  background: var(--mat-sys-surface, #fff);
+  font-weight: 600;
+}
+
+.step-head.is-complete .step-button {
+  border-top-color: #2e7d32;
+}
+
+.step-number {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.step-head:not(.is-visited) .step-number {
+  background: var(--mat-sys-outline-variant, #ccc);
+  color: var(--mat-sys-on-surface, #333);
+}
+
+.step-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+}
+
+.step-position {
+  font-weight: 600;
+}
+
+.step-progress {
+  opacity: 0.7;
+}
+
+.step-body {
+  display: block;
+}
+
+// Statutory wording: visually distinct from anything editable.
+.declaration {
+  border: 1px solid var(--mat-sys-outline-variant, #ddd);
+  border-left: 4px solid var(--mat-sys-primary);
+  border-radius: 6px;
+  padding: 16px 18px;
+  background: var(--mat-sys-surface-container-lowest, #f7f8fa);
+  margin-bottom: 16px;
+
+  h3 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+  }
+}
+
+.declaration-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.declaration-note {
+  margin: 12px 0 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.declaration-reminder {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--mat-sys-error, #b3261e);
+  background: color-mix(in srgb, var(--mat-sys-error, #b3261e) 7%, transparent);
+  color: var(--mat-sys-error, #b3261e);
+  font-size: 0.85rem;
+}
+
+.signature-note {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.step-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--mat-sys-outline-variant, #eee);
+}

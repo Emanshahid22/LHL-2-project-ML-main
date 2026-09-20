@@ -1,0 +1,133 @@
+<section class="review-panel" data-testid="review-panel" aria-label="Quality check results">
+  <header class="review-header">
+    <h3 class="review-title">Quality check</h3>
+    <button matButton="outlined" type="button" data-testid="review-rerun" (click)="rerun.emit()">
+      Run again
+    </button>
+  </header>
+
+  <!-- Evidence every check RAN, not just that nothing failed (LER-1151). -->
+  <ul class="check-summary">
+    @for (check of report().checks; track check.checkId) {
+      <li
+        class="check-row"
+        data-testid="review-check"
+        [attr.data-check-id]="check.checkId"
+        [attr.data-check-status]="check.status"
+      >
+        <span class="check-name">{{ titles[check.checkId] }}</span>
+        <span class="check-status" [class]="'check-status status-' + check.status">
+          {{ checkStatusWord(check) }}
+        </span>
+        @if (check.note) {
+          <span class="check-note" data-testid="review-check-note">{{ check.note }}</span>
+        }
+      </li>
+    }
+  </ul>
+
+  @if (clean()) {
+    <!-- The scope's alt flow: nothing wrong, say so in green. -->
+    <div class="review-ready" data-testid="review-ready" role="status">
+      <span class="ready-glyph" aria-hidden="true">✓</span>
+      Ready to Finalise — every check is clean.
+    </div>
+  }
+
+  @if (incomplete().length > 0) {
+    <div class="issue-group group-incomplete" data-testid="review-incomplete">
+      <h4 class="group-title">Could not complete ({{ incomplete().length }})</h4>
+      @for (check of incomplete(); track check.checkId) {
+        <p class="incomplete-guidance" data-testid="review-incomplete-guidance">
+          {{ check.guidance }}
+        </p>
+      }
+    </div>
+  }
+
+  @if (blocking().length > 0) {
+    <div class="issue-group group-blocking" data-testid="review-blocking">
+      <h4 class="group-title">Blocking — must be resolved ({{ blocking().length }})</h4>
+      <ul class="issue-list">
+        @for (issue of blocking(); track issue.id) {
+          <li
+            class="issue"
+            data-testid="review-issue"
+            [attr.data-issue-id]="issue.id"
+            [attr.data-severity]="issue.severity"
+          >
+            <span class="issue-subject">{{ issue.subjectLabel }}</span>
+            <span class="issue-message">{{ issue.message }}</span>
+            <!-- Deliberately NO acknowledgement control here: a blocking issue's
+                 only exit is fixing the form (LER-1148). -->
+            <button
+              type="button"
+              class="issue-jump"
+              data-testid="issue-jump"
+              (click)="jump.emit(issue)"
+            >
+              Jump to field
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (advisory().length > 0) {
+    <div class="issue-group group-advisory" data-testid="review-advisory">
+      <h4 class="group-title">Advisory — acknowledge to proceed ({{ advisory().length }})</h4>
+      <ul class="issue-list">
+        @for (issue of advisory(); track issue.id) {
+          <li
+            class="issue"
+            data-testid="review-issue"
+            [attr.data-issue-id]="issue.id"
+            [attr.data-severity]="issue.severity"
+          >
+            <span class="issue-subject">{{ issue.subjectLabel }}</span>
+            <span class="issue-message">{{ issue.message }}</span>
+            <button
+              type="button"
+              class="issue-jump"
+              data-testid="issue-jump"
+              (click)="jump.emit(issue)"
+            >
+              Jump to field
+            </button>
+            <label class="ack-label">
+              Reason for proceeding despite this (recorded in the audit trail):
+              <input
+                type="text"
+                class="ack-reason"
+                data-testid="advisory-reason"
+                [attr.maxlength]="reasonMax"
+                [value]="reasonFor(issue.id)"
+                (input)="setReason(issue.id, $any($event.target).value)"
+              />
+            </label>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <footer class="review-footer">
+    @if (finaliseError(); as msg) {
+      <p class="finalise-error" role="alert" data-testid="finalise-error">{{ msg }}</p>
+    }
+    <button
+      matButton="filled"
+      type="button"
+      data-testid="finalise-button"
+      [disabled]="!canFinalise() || finalising()"
+      (click)="onFinalise()"
+    >
+      {{ finalising() ? 'Finalising…' : 'Finalise' }}
+    </button>
+    <p class="review-caveat" data-testid="review-caveat">
+      Finalisation is checked again at the server — resolving issues here is how the button
+      becomes real, not what makes it safe.
+    </p>
+  </footer>
+</section>

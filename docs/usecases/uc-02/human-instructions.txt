@@ -1,0 +1,140 @@
+Outstanding Human Actions — UC-02 Auto-Population from Case File
+
+IMPORTANT: this file is NOT a build brief. UC-02 is delivered, proven and closed (completion commit
+3cf7644, marker branch mgs/uc-02-auto-population). The equivalent file in docs/usecases/uc-04/ is an
+instruction pack for a coder because UC-04 was authored before it was built. This one lists what a
+HUMAN still has to do for UC-02 — decisions and sign-offs that code cannot supply.
+
+Repo / where things are
+- Monorepo: https://github.com/consultancy-outfit/LHL-2-project-ML.git — path: /root/mgs-forms
+- Pack: docs/usecases/uc-02/ (epic.md, prd.md, stories/, this file, open-questions.md)
+- Scope source of truth: https://lhl-agents.netlify.app/mg-forms-scope/
+- Traceability: docs/acceptance-mapping.md
+- The resolver a reviewer should read first: libs/shared/src/lib/autofill.ts (about 70 lines, pure)
+- Decision & Review Memo (decisions A1-A6): docs/decisions/decision-and-review-memo.md - see section 4
+
+================================================================================
+1. PRACTITIONER (solicitor) — legal correctness of the mappings
+================================================================================
+
+1.1  REVIEW EVERY `mapsTo` MAPPING  [memo Section B covers the field sets these mappings sit on]. This
+     is a legal judgement dressed as a configuration value. The rule the build follows is: a mapping is
+     allowed only where the case datum genuinely IS that field. What needs a solicitor's eye is whether
+     each existing mapping meets that bar.
+     - Where to look: search `mapsTo` in libs/shared/src/lib/form-templates.ts. Eight templates carry
+       mappings — MG4 (8), MG3 (6), MG1 (5), MG5 (5), MG16 (3), MG12 (2), MG15 (2), MG2 (1).
+     - The specific one flagged during the build: MG15's `interviewee`. It is mapped to the defendant
+       name, which is right for a suspect interview and wrong if the interviewee is a witness. Recorded
+       in docs/stories/LER-1038-open-questions.md. A solicitor should confirm or remove it.
+     - What "wrong" costs here: a mapping that names the wrong person on a signed court document. This
+       is the failure mode the rule exists to prevent, not a cosmetic issue.
+
+1.2  RULE ON MG16 `subjectName`  [memo A4 — this is the decision that settles it]. It is deliberately
+     UNMAPPED and a test asserts it stays that way.
+     - The reasoning: a s.100 CJA 2003 bad-character notice concerns a NON-defendant, so prefilling the
+       defendant would name the wrong person.
+     - The complication found later: template research suggests MG16 may be defendant-only, and that our
+       current six fields may in fact describe MoJ form ebc003 — which would make the premise false.
+     - This has not been reversed deliberately: it is a legal judgement, not an implementation choice.
+       See docs/stories/LER-1039-open-questions.md and CLAUDE.md rule 8.
+
+1.3  CONFIRM THE `charges` JOIN IS ACCEPTABLE. Where a case has several offences, every offence's charge
+     wording is joined with newlines into one field. A solicitor should confirm that is the right
+     presentation on the forms that use it, rather than (say) numbered counts.
+
+================================================================================
+2. DECISION-MAKER
+================================================================================
+
+2.1  SHOULD NON-MAPPABLE FIELDS BE FLAGGED? The scope says fields not mappable from the case file
+     "remain blank and flagged as 'Requires manual entry'". As built, only MAPPED fields that could not
+     be filled carry a note; a field with no mapping carries nothing.
+     - Why: required marking already tells the user a field needs completing, and a note on every
+       unmapped field would put one beside 51 of MG3's 59 boxes, which is noise rather than information.
+     - Decide: accept the built behaviour, or add the flag as the scope literally describes it.
+     - Recorded as deviation D1 in open-questions.md.
+
+2.2  SHOULD CONFIRMED VALUES BE LOCKED? The scope's final main-flow step says "form progresses to full
+     editing mode with all confirmed values locked". Nothing is locked as built — a draft stays editable
+     until finalisation (which does not exist yet, and is UC-10).
+     - Why: there is no "confirm" action to lock against, and locking would fight autosave.
+     - Decide: is locking a real requirement, and if so does it belong to UC-08 (Form Review) or UC-10
+       (Archive) rather than here?
+     - Recorded as deviation D2 in open-questions.md.
+
+2.3  WHAT HAPPENS WHEN A REAL CASE SYSTEM ARRIVES? LER-1041 (Case system integration layer) is not
+     started. Whoever owns it should know that `resolveCaseField` is the single place that changes, and
+     `CaseFieldPath` is where new paths are added. The route is documented in
+     docs/usecases/uc-04/prd.md §6, which uses a future `caseComplexity` mapping as the worked example.
+
+2.4  IS A MANUAL IMPORT FALLBACK WANTED? LER-1054 (Manual import fallback) is not started. It only
+     matters if the real case system can be unreachable while a solicitor still needs a populated form.
+
+================================================================================
+3. CLIENT
+================================================================================
+
+3.1  WHAT DOES THE REAL CASE FILE LOOK LIKE? The five seeded cases are fiction written to make the
+     behaviour testable — one belongs only to a colleague (access control), one has two offences
+     (ambiguity). Real case records may have fields that are multi-valued where ours are single, which
+     would change which paths must return `ambiguous`.
+
+3.2  ARE THERE MORE CASE DATA POINTS WORTH MAPPING? Ten paths exist today. If the real system exposes,
+     say, custody status or a solicitor-of-record, some MG fields could be mapped that currently cannot.
+
+================================================================================
+4. THE DECISION & REVIEW MEMO — decisions A1-A6
+================================================================================
+
+docs/decisions/decision-and-review-memo.md — 19 August 2026, from Ali Zulqarnain to the project
+decision-maker and Senior Solicitor. Responses were requested by 22 August. Each item can be answered
+independently.
+
+MEMO DECISIONS THAT LAND ON UC-02. Two of the six change what this use case is allowed to map, and
+both are mapping-rule decisions rather than layout ones.
+
+A4  Is MG16 one form or two? THE decision for UC-02's most contested mapping. MG16 `subjectName` is
+    deliberately unmapped, and a test asserts it, on the argument that a s.100 CJA 2003 bad-character
+    notice concerns a NON-defendant — so prefilling the defendant would name the wrong person. The
+    memo states the complication directly: our template also carries six fields matching the separate
+    MoJ notice-to-adduce form (ebc003), and "if MG16 is defendant-only, the current rule keeping the
+    subject-name field un-prefilled rests on a false premise and could be simplified."
+    So A4 does not merely inform this rule — it decides whether the rule should exist at all.
+    Memo options: (a) MG16 = information form, notice fields move to a new ebc003 template;
+    (b) keep both field sets on one template with relabelled sections.
+    If (a) and MG16 becomes defendant-only, the unmapped rule and its test should be revisited
+    deliberately, not quietly. Do not change it without the ruling (CLAUDE.md rule 8).
+
+A2  MG2 designation. MG2 carries exactly one mapping today (`interviewee` -> defendantName), which is
+    right for a suspect interview and wrong for a witness. If MG2 becomes the Special Measures
+    Assessment and its interview content moves to MG15, that mapping moves with the content — and
+    MG15 already carries the same interviewee hazard flagged in item 1.1 above. Answering A2 and the
+    MG15 `interviewee` question together avoids reviewing the same mapping twice.
+
+CONTEXT — not UC-02 decisions, but each changes how many mappings exist:
+- A1  If MG1 is dropped, its FIVE mapped fields go with it — the second-largest mapped template after
+      MG4. Nothing to decide here; just expect the mapped-field count to change.
+- A3  MG14 carries no mappings today, so a re-designation does not affect auto-fill either way.
+- A5  MG6 naming. MG6 carries no mappings; UC-04's completeness check deliberately uses a manual
+      complexity field rather than a case datum, and PRD §6 documents the route to mapping it later.
+- A6  Stack ratification. No effect on mapping rules.
+
+The repo's own standing record, consistent with the memo:
+
+- CLAUDE.md rule 4 / docs/HANDOVER.md §4.3 — `mapsTo` only where the case datum genuinely is the field;
+  MG16 `subjectName` stays unmapped pending a practitioner ruling (now memo A4).
+- CLAUDE.md rule 7 — dates display DD/MM/YYYY and store ISO; do NOT switch to
+  provideNativeDateAdapter, because Date objects in controls break auto-fill provenance matching.
+- CLAUDE.md rule 8 — legal and designation calls are documented and escalated, never acted on. A2 and
+  A4 are exactly that kind of call.
+- docs/HANDOVER.md §2 phase 1 — the original MG16 decision and why it was not reversed.
+
+================================================================================
+5. NOT A HUMAN TASK, BUT OUTSTANDING — for the record
+================================================================================
+
+- LER-1040 and LER-1055 (both "QA: Definition of Done checks") are not started as tickets, although the
+  QA they describe exists: e2e/uc02-autofill.spec.ts carries 21 checks and docs/acceptance-mapping.md
+  maps all four DoD lines. The tickets are tracker debt, not missing work.
+- LER-1041 (Case system integration layer) and LER-1054 (Manual import fallback) are genuinely not built.
+- No automated check asserts that no code path writes to the Case table. See open-questions.md G1.

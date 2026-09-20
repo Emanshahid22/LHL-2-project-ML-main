@@ -1,0 +1,61 @@
+<a routerLink="/" class="back-link">← Dashboard</a>
+
+@if (loading()) {
+  <div class="spinner-row"><mat-spinner diameter="32" /></div>
+} @else if (loadFailed()) {
+  <div class="error-panel">
+    <p>This case could not be loaded. It may not exist, or you may not have access to it.</p>
+    <button matButton="filled" type="button" (click)="load()">Retry</button>
+  </div>
+} @else if (caseDetail(); as c) {
+  <mat-card appearance="outlined" class="case-card">
+    <mat-card-header>
+      <mat-card-title class="urn">{{ c.urn }}</mat-card-title>
+      <mat-card-subtitle>R v {{ c.defendantName }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <dl class="case-facts">
+        <div>
+          <dt>Offence</dt>
+          <dd>{{ c.offenceSummary }}</dd>
+        </div>
+        <div>
+          <dt>Court</dt>
+          <dd>{{ c.courtName ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Next hearing</dt>
+          <dd>{{ c.nextHearingAt ? (c.nextHearingAt | date: 'EEE d MMM y, HH:mm') : 'Not listed' }}</dd>
+        </div>
+        <div>
+          <dt>CPS reference</dt>
+          <dd>{{ c.cpsReference ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Officer in the case</dt>
+          <dd>{{ c.officerInCase ?? '—' }}</dd>
+        </div>
+        @if (c.offences.length > 0) {
+          <div>
+            <dt>Offences</dt>
+            <dd>
+              <ul class="offence-list">
+                @for (offence of c.offences; track offence.id) {
+                  <li>{{ offence.offenceDate | date: 'd MMM y' }} — {{ offence.chargeWording }}</li>
+                }
+              </ul>
+            </dd>
+          </div>
+        }
+      </dl>
+    </mat-card-content>
+    <mat-card-actions>
+      <button matButton="filled" type="button" data-testid="complete-mg-form" (click)="completeForm()">
+        Complete MG Form
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- UC-10: the Documents section — the "MG Forms" folder (LER-1172/1173). -->
+  <app-case-documents [caseId]="c.id" />
+}

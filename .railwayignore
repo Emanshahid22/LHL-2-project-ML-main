@@ -1,0 +1,16 @@
+# Keep the upload lean, and keep local state out of the deploy context.
+node_modules
+dist
+apps/api/dist
+apps/web/dist
+libs/shared/dist
+test-results
+playwright-report
+e2e/audit-artifacts
+
+# The local development database never ships: staging runs its own database on
+# the mounted volume (DATABASE_URL=file:/data/mgforms.db), migrated and seeded
+# with the synthetic fixtures on boot. Shipping dev.db would smuggle local
+# state into an environment that must hold seeded fake cases and nothing else.
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal

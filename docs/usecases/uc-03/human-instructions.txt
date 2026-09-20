@@ -1,0 +1,172 @@
+Outstanding Human Actions — UC-03 MG11 Witness Statement Completion
+
+IMPORTANT: this file is NOT a build brief. UC-03 is delivered, proven and closed (completion commit
+7c36d24, marker branch mgs/uc-03-mg11-wizard). The equivalent file in docs/usecases/uc-04/ is an
+instruction pack for a coder because UC-04 was authored before it was built. This one lists what a
+HUMAN still has to do for UC-03 — and UC-03 has the largest human dependency in the project.
+
+Repo / where things are
+- Monorepo: https://github.com/consultancy-outfit/LHL-2-project-ML.git — path: /root/mgs-forms
+- Pack: docs/usecases/uc-03/ (epic.md, prd.md, stories/, this file, open-questions.md)
+- Scope source of truth: https://lhl-agents.netlify.app/mg-forms-scope/
+- Traceability: docs/acceptance-mapping.md
+- Read first if you are reviewing: libs/shared/src/lib/mg11-declaration.ts (35 lines)
+- Decision & Review Memo (decisions A1-A6): docs/decisions/decision-and-review-memo.md - see section 5
+
+================================================================================
+1. THE ONE BLOCKING ITEM — declaration wording sign-off
+================================================================================
+
+1.1  SIGN OFF THE STATUTORY DECLARATION WORDING  [memo Section B, final item]. This is the only
+     acceptance criterion in the whole project recorded as BLOCKED, and it is blocked on a person, not
+     on code. The memo asks for it in these words: "MG11 statutory declaration (provide the current
+     official verbatim wording, s.9 CJA 1967 / s.5B MCA 1980 — the build carries a draft protected by
+     an integrity hash)".
+
+     The criterion: "MG11 declaration text matches the current official verbatim wording".
+
+     Why nothing in the repo can close it: the scope document REQUIRES the wording to match the current
+     official form, but does not reproduce that wording. There is no copy of the official MG11 in this
+     repository to compare against. So the match cannot be proven here by any amount of testing.
+
+     What IS already guaranteed, and does not need re-checking:
+     - The wording exists in exactly ONE place: MG11_DECLARATION in libs/shared.
+     - It is rendered read-only and is never stored per draft — a draft records only
+       declarationConfirmed: true.
+     - It is pinned by MG11_DECLARATION_SHA256, and the API hashes the constant on startup and REFUSES
+       TO BOOT on a mismatch. There is no degraded mode.
+     - No endpoint accepts declaration wording from any client, on any form (422 on `declarationText`).
+
+     What the wording currently is: the s.9 CJA 1967 / s.5B MCA 1980 declaration as it ALREADY appeared
+     in the MG11 template before this work started. Nobody has confirmed it against a current official
+     form.
+
+     WHO: someone with access to the current official MG11 — a senior solicitor or the client.
+     Jira: sub-task LER-1200 exists for exactly this. Tickets LER-1077 (Senior solicitor review —
+     wording) and LER-1078 (Senior solicitor review — output) are the review tickets, both blocked.
+
+     IF THE WORDING NEEDS TO CHANGE: the constant and its SHA-256 must be updated in the SAME commit,
+     or the API will not start. That friction is deliberate. The regeneration command is in a comment
+     beside the constant.
+
+================================================================================
+2. PRACTITIONER (solicitor) — beyond the declaration
+================================================================================
+
+2.1  CONFIRM THE FIVE FLAGGED PHRASES ARE THE RIGHT FIVE. The scope names three ("I was told that",
+     "I heard that", "In my opinion"); the build flags five, adding "I think" and "In my view".
+     - Are those two right to flag? Are there phrases a solicitor would add?
+     - Are the explanations correct? Each one says what to write INSTEAD, not just what is wrong, so a
+       wrong explanation would actively mislead. They are in
+       libs/shared/src/lib/narrative-flags.ts (NARRATIVE_PATTERNS) and are data, so adding a phrase is a
+       one-line change plus a test.
+
+2.2  CONFIRM THE VULNERABLE-WITNESS TEST. As built, a witness is treated as vulnerable if they were
+     under 18 at the statement date, OR a special-measures category (vulnerable / intimidated /
+     assessment) is selected.
+     - Is under-18-at-statement-date the right test, or should it be age at the offence date, or at the
+       likely trial date? The YJCEA 1999 s.16/s.17 categories are broader than age.
+     - Are the three special-measures options the right list?
+     - When the statement date is blank, age is assessed as at TODAY so vulnerability is never silently
+       skipped. Confirm that fallback is acceptable.
+
+2.3  VERIFY MG11's FIFTEEN FIELDS  [memo Section B lists MG11 and MG5 as "realistic but never
+     practitioner-verified"]. MG11 carries NO `verification` marker, which means "not yet
+     assessed" — NOT approved. It and MG5 are the quality bar but neither is practitioner-verified.
+     Do not read the absent chip as a tick. See CLAUDE.md rule 2 and docs/HANDOVER.md §4.4.
+
+================================================================================
+3. DECISION-MAKER
+================================================================================
+
+3.1  WHERE DOES GENERAL LEGAL-LANGUAGE ASSISTANCE BELONG? Ticket LER-1062 (Step 2: legal language hook)
+     is not started. The scope's UC-03 description mentions "legal language prompts", and UC-06 is
+     "Legal Language Assistance" in its own right. Decide whether UC-06 subsumes LER-1062 or whether
+     MG11 needs its own hook first. Nothing is blocked either way.
+
+3.2  IS "LITERAL TYPING OF DECLARATION" (LER-1068) STILL WANTED? Not started, and it may be obsolete:
+     the ticket appears to predate the decision to make the declaration a hash-pinned constant rather
+     than something typed or stored. Confirm it can be closed as superseded rather than left open.
+
+3.3  PAGE COUNTS (LER-1071, LER-1072, LER-1073 — "Page count from renderer", "interpolation",
+     "assertion"). Not started. These look like PDF-layout concerns ("page 1 of 3" on the printed
+     statement), which puts them in UC-09 rather than UC-03. Confirm the reassignment.
+
+================================================================================
+4. CLIENT
+================================================================================
+
+4.1  SUPPLY THE OFFICIAL MG11, or confirm the wording in writing. See §1.1. This is the single highest-
+     value thing the client can do for this use case.
+
+4.2  UC-09 LAYOUT FIDELITY, because UC-03 depends on the answer  [memo A1, A3, A5 all block the UC-09
+     layout binding, which is why the memo's deadline is framed around it]. Two UC-03 criteria reference
+     PDF output — the wet-signature space and the vulnerable-witness indicator persisting to the printed
+     page. Neither can be finished until it is known whether output must reproduce the official MG11
+     layout exactly or render cleanly. Do not start UC-09 before this is answered (docs/HANDOVER.md §6).
+
+4.3  WHAT DOES "submitted" MEAN in DoD #3 ("form can be submitted with flags present")? There is no
+     submit or finalise action in the product yet — that is UC-10. If "submitted" means something
+     available today, say what.
+
+================================================================================
+5. THE DECISION & REVIEW MEMO — decisions A1-A6
+================================================================================
+
+docs/decisions/decision-and-review-memo.md — 19 August 2026, from Ali Zulqarnain to the project
+decision-maker and Senior Solicitor. Responses were requested by 22 August. Each item can be answered
+independently.
+
+WHERE UC-03 SITS IN THE MEMO. UC-03's blocking item is not in Section A at all — it is the last item of
+Section B, the practitioner review agenda:
+
+    "MG11 statutory declaration (provide the current official verbatim wording, s.9 CJA 1967 /
+     s.5B MCA 1980 — the build carries a draft protected by an integrity hash)"
+
+That single line is item 1.1 of this file and the project's only BLOCKED acceptance criterion. Section B
+also lists "MG5 and MG11 (realistic but never practitioner-verified)", which is item 2.3.
+
+SECTION A DECISIONS AND THEIR BEARING ON UC-03. None of the six blocks this use case; three of them
+change what UC-03's PDF-dependent criteria will eventually be tested against.
+
+A3  MG14 designation is the one with real UC-03 content. The memo notes that identification evidence
+    officially belongs on an MG11 — so if MG14 is re-designated to the Conditional Caution,
+    identification-statement capture moves into MG11 practice, which is this use case. Nothing in the
+    code changes today; the practitioner review scope for MG11 would widen.
+
+A1  MG1 in or out affects the "all 11 forms" criterion (UC-01), not MG11's behaviour. Listed because
+    it blocks the same UC-09 layout binding that UC-03's criterion #4 waits on.
+
+A5  MG6 naming likewise blocks the UC-09 binding. UC-03's "vulnerable witness indicator persists to PDF
+    output" and its wet-signature space both wait on UC-09 starting, which the memo says cannot safely
+    happen while form identities are open. That is the connection to note: A1/A3/A5 do not block UC-03
+    directly, they block the use case that would finally close UC-03's two Partial criteria.
+
+A2, A4, A6  No bearing on UC-03. A4 governs UC-02's subject-name mapping; A2 concerns MG2/MG15; A6 is
+    stack ratification, which affects UC-09 tooling choices only.
+
+The repo's own standing record, consistent with the memo:
+
+- CLAUDE.md rule 2 / docs/HANDOVER.md §4.4 — MG11 and MG5 are the quality bar but are NOT
+  practitioner-verified; do not mark them verified. (Memo Section B says the same.)
+- CLAUDE.md rule 6 / docs/HANDOVER.md §4.5 — amber is advisory; RED IS RESERVED for UC-07 sensitive
+  material. This is why hearsay flags are amber.
+- CLAUDE.md gotchas — MG11 uses a wizard shell AROUND the shared renderer (visibleFieldIds); never fork
+  it. The declaration is hash-pinned and the API refuses to boot on mismatch.
+- CLAUDE.md rule 7 — dates are DD/MM/YYYY display, ISO storage; this governs the signature date.
+- docs/HANDOVER.md §2 phase 5 — the three bugs found by verification rather than review (backdrop
+  layering, duplicate declaration render, required-marker gap).
+
+================================================================================
+6. NOT A HUMAN TASK, BUT OUTSTANDING — for the record
+================================================================================
+
+In the UC-03 ticket block and NOT delivered:
+- LER-1062 Step 2: legal language hook — see §3.1.
+- LER-1068 Literal typing of declaration — see §3.2, probably superseded.
+- LER-1071 / LER-1072 / LER-1073 Page count — see §3.3, probably UC-09.
+- LER-1079 QA: Definition of Done checks — tracker debt only. The QA exists:
+  e2e/uc03-mg11-wizard.spec.ts carries 21 checks and docs/acceptance-mapping.md maps all four DoD lines.
+- LER-1077 / LER-1078 Senior solicitor review — blocked on §1.1 and §2.
+
+All are listed in open-questions.md.

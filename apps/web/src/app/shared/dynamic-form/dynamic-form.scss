@@ -1,0 +1,282 @@
+@use 'tokens' as t;
+
+.dynamic-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  margin: 20px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--mg-border);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mat-sys-primary);
+}
+
+.field-row {
+  margin-bottom: 4px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px 0;
+
+  mat-checkbox {
+    flex: 1;
+  }
+}
+
+.required-marker {
+  color: var(--mg-danger-500);
+  margin-left: 2px;
+}
+
+.checkbox-error {
+  color: var(--mat-sys-error, #b3261e);
+  font-size: 0.75rem;
+  margin: 0 0 8px 44px;
+}
+
+.help-toggle {
+  flex-shrink: 0;
+}
+
+.help-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.field-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -14px 0 14px 4px;
+  // Lift above the mat-form-field subscript wrapper, which otherwise
+  // overlaps this row and intercepts pointer events.
+  position: relative;
+  z-index: 1;
+}
+
+.checkbox-field + .field-meta {
+  margin-top: -4px;
+}
+
+.autofill-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--mg-radius-pill);
+  background: var(--mg-blue-100);
+  color: var(--mg-navy-800);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.autofill-clear {
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, #666);
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:hover {
+    color: var(--mat-sys-error, #b3261e);
+  }
+}
+
+.autofill-note {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--mg-ink-500);
+  cursor: help;
+}
+
+.field-meta + .help-panel {
+  margin-top: 0;
+}
+
+.help-panel {
+  margin: -12px 0 16px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--mat-sys-primary);
+  border-radius: 4px;
+  background: var(--mat-sys-surface-container, #eef2f8);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.checkbox-field + .help-panel {
+  margin-top: 0;
+}
+
+// The datepicker renders its calendar in an overlay, so its host element needs
+// no layout box. Without this it sits inside the field's infix and pushes the
+// input onto two lines.
+mat-datepicker {
+  display: none;
+}
+
+/* UC-04 repeating group: a numbered row table that stays usable at narrow
+   widths by scrolling itself rather than the page. */
+.schedule {
+  border: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  border-radius: 10px;
+  padding: 12px 14px 14px;
+}
+
+.schedule-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+
+  .schedule-label { font-weight: 600; }
+}
+
+.schedule-empty {
+  margin: 4px 0 10px;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+
+  th {
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+    padding: 0 6px 4px;
+    font-weight: 600;
+  }
+
+  td { padding: 2px 6px 6px; vertical-align: top; }
+  .ordinal-col { width: 2.5rem; text-align: center; }
+  .actions-col { width: 7rem; }
+
+  /* The row number and the first column (the item's own reference) stay on
+     screen while the later columns scroll. Numbering IS the point of a schedule:
+     at 1366px the table needs to scroll sideways, and before this the ordinal and
+     the reference were the first things to leave the viewport — so the user was
+     scrolling blind, unable to tell which row they were editing. */
+  .ordinal-col,
+  .pinned-col {
+    position: sticky;
+    z-index: 2;
+    /* Opaque, or the scrolling columns show through the pinned ones. */
+    background: var(--mg-surface);
+  }
+  .ordinal-col { left: 0; }
+  .pinned-col {
+    left: 2.5rem; /* clears .ordinal-col's width */
+    /* A hairline that reads as "there is more table to the right". */
+    box-shadow: 1px 0 0 var(--mg-border);
+  }
+}
+
+.ordinal {
+  display: inline-block;
+  min-width: 1.6rem;
+  padding: 10px 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.cell-field { width: 100%; min-width: 9rem; }
+
+/* The pinned reference column is narrower than a free-scrolling one: it has to
+   earn its place on a 1366px viewport without pushing the rest off. */
+.pinned-col .cell-field { min-width: 7.5rem; }
+
+.row-actions {
+  display: flex;
+  gap: 2px;
+  padding-top: 6px;
+
+  .delete-row { color: var(--mat-sys-error, #b3261e); }
+}
+
+.schedule-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.schedule-count { font-size: 0.8rem; opacity: 0.7; }
+
+.schedule-error {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--mat-sys-error, #b3261e);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* UC-05 validation messages. Advisory is amber and never red: red is reserved
+   for UC-07 sensitive material. Errors keep Material's own error styling. */
+.validation-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--mg-amber-700);
+
+  .hint-glyph {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--mg-amber-500);
+    color: var(--mg-surface);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+  }
+}
+
+.format-hint {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* UC-07: the non-sensitive schedule export, offered beside the schedule. */
+.export-link {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--mg-blue-600);
+  text-decoration: underline;
+}

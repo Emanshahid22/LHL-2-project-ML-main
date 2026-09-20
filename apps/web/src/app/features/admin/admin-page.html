@@ -1,0 +1,57 @@
+<mat-card appearance="outlined" class="admin-card">
+  <mat-card-header>
+    <mat-card-title>User administration</mat-card-title>
+    <mat-card-subtitle>Roles are provisional pending ratification — see the decision register</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <form class="create-row" (ngSubmit)="createUser()" data-testid="admin-create-form">
+      <mat-form-field appearance="outline"><mat-label>Email</mat-label>
+        <input matInput name="email" [(ngModel)]="newEmail" data-testid="admin-new-email" aria-label="Email" required />
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Name</mat-label>
+        <input matInput name="name" [(ngModel)]="newName" data-testid="admin-new-name" aria-label="Full name" required />
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Role</mat-label>
+        <mat-select name="role" [(ngModel)]="newRole" data-testid="admin-new-role">
+          @for (r of roleOptions; track r) { <mat-option [value]="r">{{ r }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Temporary password</mat-label>
+        <input matInput name="temp" [(ngModel)]="newPassword" data-testid="admin-new-password" aria-label="Temporary password" required />
+      </mat-form-field>
+      <button matButton="filled" type="submit" data-testid="admin-create-user">Create user</button>
+    </form>
+
+    <div class="user-list" data-testid="admin-user-list">
+      @for (u of users(); track u.id) {
+        <div class="user-row" [attr.data-testid]="'admin-user-' + u.email">
+          <span class="u-name">{{ u.name }}</span>
+          <span class="u-email">{{ u.email }}</span>
+          <mat-form-field appearance="outline" class="u-roles">
+            <mat-label>Roles</mat-label>
+            <mat-select
+              multiple
+              [ngModel]="u.roles"
+              (ngModelChange)="setRoles(u, $event)"
+              [attr.data-testid]="'admin-roles-' + u.email"
+            >
+              @for (r of roleOptions; track r) { <mat-option [value]="r">{{ r }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-slide-toggle
+            [checked]="u.sensitiveMaterialAccess"
+            (change)="setGrant(u, $event.checked)"
+            [attr.data-testid]="'admin-grant-' + u.email"
+          >
+            Sensitive Material Access
+          </mat-slide-toggle>
+          <button matButton type="button" (click)="resetPassword(u)"
+            [attr.data-testid]="'admin-reset-' + u.email">
+            Reset password
+          </button>
+          @if (u.mustChange) { <span class="u-mustchange">password change pending</span> }
+        </div>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>

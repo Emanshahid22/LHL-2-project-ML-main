@@ -1,0 +1,378 @@
+<form [formGroup]="form" class="dynamic-form" autocomplete="off">
+  @for (section of sections(); track $index) {
+    @if (section.title && showSectionTitles()) {
+      <h3 class="section-title">{{ section.title }}</h3>
+    }
+
+    @for (field of section.fields; track field.id) {
+      <div class="field-row" [attr.data-field-id]="field.id">
+        @switch (field.type) {
+          @case ('checkbox') {
+            <div class="checkbox-field">
+              <mat-checkbox [formControlName]="field.id">
+                {{ field.label }}
+                @if (field.required) {
+                  <span class="required-marker" aria-label="required">*</span>
+                }
+              </mat-checkbox>
+              <button
+                type="button"
+                mat-icon-button
+                class="help-toggle"
+                (click)="toggleHelp(field.id)"
+                [attr.aria-expanded]="isHelpOpen(field.id)"
+                [attr.aria-label]="'Help for ' + field.label"
+              >
+                <span class="help-glyph">?</span>
+              </button>
+            </div>
+            @if (errorMessage(field); as msg) {
+              <div class="checkbox-error">{{ msg }}</div>
+            }
+          }
+          @case ('group') {
+            <!-- UC-04: a repeating group. The number in the first cell is the
+                 row's position, rendered from $index — there is no stored
+                 counter to drift, so the sequence cannot develop a gap. -->
+            <div class="schedule" data-testid="schedule" [attr.data-group-id]="field.id">
+              <div class="schedule-heading">
+                <span class="schedule-label">
+                  {{ field.label }}
+                  @if (field.required) {
+                    <span class="required-marker" aria-label="required">*</span>
+                  }
+                </span>
+                <button
+                  type="button"
+                  mat-icon-button
+                  class="help-toggle"
+                  (click)="toggleHelp(field.id)"
+                  [attr.aria-expanded]="isHelpOpen(field.id)"
+                  [attr.aria-label]="'Help for ' + field.label"
+                >
+                  <span class="help-glyph">?</span>
+                </button>
+              </div>
+
+              @if (rowsOf(field).length === 0) {
+                <p class="schedule-empty" data-testid="schedule-empty">
+                  No {{ rowNoun(field) }}s yet. Add the first one below.
+                </p>
+              } @else {
+                <table class="schedule-table">
+                  <caption class="visually-hidden">{{ field.label }}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="ordinal-col">#</th>
+                      @for (column of field.columns ?? []; track column.id; let ci = $index) {
+                        <th
+                          scope="col"
+                          [class.pinned-col]="ci === 0"
+                          [attr.data-column-id]="column.id"
+                        >
+                          {{ column.label }}
+                          @if (column.required) {
+                            <span class="required-marker" aria-label="required">*</span>
+                          }
+                        </th>
+                      }
+                      <th scope="col" class="actions-col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody [formArrayName]="field.id">
+                    @for (row of rowsOf(field); track rowIdOf(row); let i = $index) {
+                      <tr
+                        [formGroupName]="i"
+                        data-testid="schedule-row"
+                        [attr.data-row-id]="rowIdOf(row)"
+                      >
+                        <td class="ordinal-col">
+                          <span class="ordinal" data-testid="row-ordinal">{{ i + 1 }}</span>
+                        </td>
+                        @for (column of field.columns ?? []; track column.id; let ci = $index) {
+                          <td [attr.data-column-id]="column.id" [class.pinned-col]="ci === 0">
+                            <!-- No mat-label in a cell: the column header is the
+                                 label, and repeating it inside every cell both
+                                 doubles the reading and leaves the text covering
+                                 the whole control at table widths. The controls
+                                 carry the same name as an aria-label instead. -->
+                            <mat-form-field appearance="outline" class="cell-field" subscriptSizing="dynamic">
+                              @switch (column.type) {
+                                @case ('select') {
+                                  <mat-select
+                                    [formControlName]="column.id"
+                                    [attr.aria-label]="column.label + ' for ' + rowNoun(field) + ' ' + (i + 1)"
+                                  >
+                                    @for (opt of column.options ?? []; track opt.value) {
+                                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                                    }
+                                  </mat-select>
+                                }
+                                @case ('textarea') {
+                                  <textarea
+                                    matInput
+                                    [formControlName]="column.id"
+                                    [rows]="column.rows ?? 2"
+                                    [attr.aria-label]="column.label + ' for ' + rowNoun(field) + ' ' + (i + 1)"
+                                  ></textarea>
+                                }
+                                @case ('number') {
+                                  <input
+                                    matInput
+                                    type="number"
+                                    [formControlName]="column.id"
+                                    [attr.aria-label]="column.label + ' for ' + rowNoun(field) + ' ' + (i + 1)"
+                                  />
+                                }
+                                @default {
+                                  <input
+                                    matInput
+                                    type="text"
+                                    [formControlName]="column.id"
+                                    [attr.aria-label]="column.label + ' for ' + rowNoun(field) + ' ' + (i + 1)"
+                                  />
+                                }
+                              }
+                              @if (cellError(field, column, row); as msg) {
+                                <mat-error [attr.data-testid]="'cell-error-' + column.id">{{ msg }}</mat-error>
+                              }
+                            </mat-form-field>
+                          </td>
+                        }
+                        <td class="actions-col">
+                          <div class="row-actions">
+                            <button
+                              type="button"
+                              mat-icon-button
+                              data-testid="move-row-up"
+                              [disabled]="i === 0"
+                              [attr.aria-label]="'Move ' + rowNoun(field) + ' ' + (i + 1) + ' up'"
+                              (click)="moveRow(field, i, i - 1)"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              mat-icon-button
+                              data-testid="move-row-down"
+                              [disabled]="i === rowsOf(field).length - 1"
+                              [attr.aria-label]="'Move ' + rowNoun(field) + ' ' + (i + 1) + ' down'"
+                              (click)="moveRow(field, i, i + 1)"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              mat-icon-button
+                              class="delete-row"
+                              data-testid="delete-row"
+                              [attr.aria-label]="'Delete ' + rowNoun(field) + ' ' + (i + 1)"
+                              (click)="requestRowDelete(field, i)"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+
+              <div class="schedule-footer">
+                <button
+                  matButton="outlined"
+                  type="button"
+                  data-testid="add-item"
+                  (click)="addRow(field)"
+                >
+                  Add {{ rowNoun(field) }}
+                </button>
+                <span class="schedule-count" data-testid="schedule-count">
+                  {{ rowsOf(field).length }}
+                  {{ rowsOf(field).length === 1 ? rowNoun(field) : rowNoun(field) + 's' }}
+                </span>
+                @if (field.sensitivityFlag && !field.sensitive && draftId()) {
+                  <!-- UC-07: a plain download link — the endpoint builds the CSV
+                       with the one shared exclusion rule and audits the export. -->
+                  <a
+                    class="export-link"
+                    data-testid="export-non-sensitive"
+                    [href]="'/api/drafts/' + draftId() + '/export/non-sensitive-schedule'"
+                    download
+                  >Export non-sensitive schedule</a>
+                }
+              </div>
+
+              @if (groupError(field); as msg) {
+                <div class="schedule-error" data-testid="schedule-error">{{ msg }}</div>
+              }
+            </div>
+          }
+          @case ('date') {
+            <!-- UK convention: typed and displayed DD/MM/YYYY, while the control
+                 value stays the ISO string a draft stores (see IsoDateAdapter).
+                 This has its own branch because a suffix nested inside another
+                 control-flow block does not reach mat-form-field's suffix slot,
+                 and mat-datepicker must sit outside the field or it takes a line
+                 inside the input area. -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>{{ field.label }}</mat-label>
+              <input
+                matInput
+                [matDatepicker]="datepicker"
+                [formControlName]="field.id"
+                placeholder="DD/MM/YYYY"
+                inputmode="numeric"
+                (focus)="onFieldFocus(field.id)"
+                (blur)="onFieldBlur(field.id)"
+              />
+              <mat-datepicker-toggle matSuffix [for]="datepicker" />
+              <button
+                type="button"
+                mat-icon-button
+                matSuffix
+                class="help-toggle"
+                (click)="toggleHelp(field.id)"
+                [attr.aria-expanded]="isHelpOpen(field.id)"
+                [attr.aria-label]="'Help for ' + field.label"
+              >
+                <span class="help-glyph">?</span>
+              </button>
+              @if (errorMessage(field); as msg) {
+                <mat-error>{{ msg }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-datepicker #datepicker />
+          }
+          @default {
+            @if (isNarrative(field)) {
+              <!-- UC-06: a declared narrative renders through the shared narrative
+                   component, so MG5's prose gets the same highlighting and the same
+                   Legal Language Assistant as MG11's statement. The MG11 wizard
+                   passes this same component explicitly — one component, two entry
+                   points, never a fork. It sits outside mat-form-field because it
+                   draws its own label and its highlight backdrop has to line up
+                   with the textarea to the pixel. -->
+              <app-narrative-field
+                [control]="control(field.id)"
+                [field]="field"
+                [draftId]="draftId()"
+              />
+            } @else {
+            <mat-form-field appearance="outline" class="full-width">
+              <!-- No manual asterisk here: Material already renders its own
+                   required marker for a control with a required validator.
+                   Checkboxes are not inside mat-form-field, so they add one. -->
+              <mat-label>{{ field.label }}</mat-label>
+
+              @switch (field.type) {
+                @case ('textarea') {
+                  <textarea
+                    matInput
+                    [formControlName]="field.id"
+                    [rows]="field.rows ?? 4"
+                    [placeholder]="field.placeholder ?? ''"
+                  ></textarea>
+                }
+                @case ('select') {
+                  <mat-select [formControlName]="field.id">
+                    @for (opt of field.options ?? []; track opt.value) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                }
+                @case ('time') {
+                  <input matInput type="time" [formControlName]="field.id" />
+                }
+                @case ('number') {
+                  <input
+                    matInput
+                    type="number"
+                    [formControlName]="field.id"
+                    [placeholder]="field.placeholder ?? ''"
+                  />
+                }
+                @default {
+                  <input
+                    matInput
+                    type="text"
+                    [formControlName]="field.id"
+                    [placeholder]="field.placeholder ?? ''"
+                  />
+                }
+              }
+
+              <button
+                type="button"
+                mat-icon-button
+                matSuffix
+                class="help-toggle"
+                (click)="toggleHelp(field.id)"
+                [attr.aria-expanded]="isHelpOpen(field.id)"
+                [attr.aria-label]="'Help for ' + field.label"
+              >
+                <span class="help-glyph">?</span>
+              </button>
+
+              @if (errorMessage(field); as msg) {
+                <mat-error>{{ msg }}</mat-error>
+              }
+            </mat-form-field>
+            }
+          }
+        }
+
+        @if (isAutoFilled(field)) {
+          <div class="field-meta">
+            <span class="autofill-badge" data-testid="autofill-badge">Auto-filled</span>
+            <button
+              type="button"
+              class="autofill-clear"
+              data-testid="autofill-clear"
+              (click)="clearField(field)"
+            >
+              Clear
+            </button>
+          </div>
+        } @else if (autoFillNote(field); as note) {
+          <div class="field-meta">
+            <span class="autofill-note" data-testid="autofill-note" [attr.title]="note">
+              Not auto-filled — {{ note }}
+            </span>
+          </div>
+        }
+
+        @if (formatHint(field); as hint) {
+          <div class="format-hint" data-testid="format-hint">{{ hint }}</div>
+        }
+        @if (advisoryHint(field); as hint) {
+          <!-- UC-05 advisory: amber, non-blocking, control stays valid. Red is
+               reserved for UC-07 sensitive material. -->
+          <div class="validation-hint" role="status" data-testid="validation-hint">
+            <span class="hint-glyph" aria-hidden="true">!</span>{{ hint }}
+          </div>
+        }
+
+        @if (isHelpOpen(field.id)) {
+          <div class="help-panel" role="note">{{ field.helpText }}</div>
+        }
+      </div>
+
+      @if (field.sensitivityFlag && !field.sensitive && sensitiveFields().length > 0) {
+        <!-- UC-07: the MG6D block sits directly under the schedule that
+             triggers it. The component renders banner, lock, instructions and
+             the confirmation gate; once unlocked, the sensitive fields join
+             sections() and render below through this same loop. -->
+        <app-sensitive-section
+          [active]="sensitiveActive()"
+          [section]="sensitiveSection()"
+          [draftId]="draftId()"
+          [fields]="sensitiveFields()"
+          [values]="initialValues()"
+          (unlocked)="onSensitiveUnlocked()"
+        />
+      }
+    }
+  }
+</form>

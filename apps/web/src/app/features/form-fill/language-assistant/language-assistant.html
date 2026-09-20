@@ -1,0 +1,150 @@
+@if (!session.enabled()) {
+  <!-- The scope's alt flow: assistance off hides every suggestion and clears the
+       informal highlights, for this session only. It stays reachable, because a
+       toggle you cannot undo is a trap. -->
+  <div
+    class="assistant assistant-off"
+    data-testid="language-assistant-off"
+    [attr.data-field-id]="fieldId()"
+  >
+    <span class="off-text">Language assistance is off for this session.</span>
+    <button
+      type="button"
+      class="assistant-action"
+      data-testid="assistance-enable"
+      (click)="setEnabled(true)"
+    >
+      Turn on
+    </button>
+  </div>
+} @else {
+  <section
+    class="assistant"
+    role="complementary"
+    [attr.aria-labelledby]="headingId()"
+    data-testid="language-assistant"
+    [attr.data-field-id]="fieldId()"
+    [attr.data-open]="open()"
+  >
+    <header class="assistant-header">
+      <button
+        type="button"
+        class="assistant-toggle"
+        data-testid="assistant-toggle"
+        [attr.aria-expanded]="open()"
+        [attr.aria-controls]="'assistant-body-' + fieldId()"
+        (click)="toggle()"
+      >
+        <span class="chevron" aria-hidden="true">{{ open() ? '▾' : '▸' }}</span>
+        <span class="assistant-title" [id]="headingId()">Legal Language Assistant</span>
+        <span class="assistant-count" data-testid="assistance-count">
+          {{ visiblePrompts().length }}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="assistant-action"
+        data-testid="assistance-disable"
+        (click)="setEnabled(false)"
+      >
+        Turn off
+      </button>
+    </header>
+
+    <!-- Announced politely, and never as the list itself: re-reading every prompt
+         on each keystroke would talk over the user typing. -->
+    <p class="visually-hidden" role="status" aria-live="polite">
+      {{ visiblePrompts().length }} language
+      {{ visiblePrompts().length === 1 ? 'suggestion' : 'suggestions' }} for this narrative
+    </p>
+
+    @if (open()) {
+      <div class="assistant-body" [id]="'assistant-body-' + fieldId()" data-testid="assistant-body">
+        @if (degraded()) {
+          <!-- The scope's own wording for this state. It is a statement of fact in
+               the panel, not an error: no snackbar, no banner, nothing blocked. -->
+          <p class="assistant-degraded" role="status" data-testid="assistance-unavailable">
+            Language assistance temporarily unavailable — the checks that run in this form still
+            apply, and the statement is unaffected.
+          </p>
+        }
+
+        @if (visiblePrompts().length === 0) {
+          <p class="assistant-empty" data-testid="assistance-empty">
+            Nothing to suggest. The assistant only checks the patterns it has been given — this is
+            not a review of the statement.
+          </p>
+        } @else {
+          <ul class="prompt-list">
+            @for (prompt of visiblePrompts(); track prompt.id) {
+              <li
+                class="prompt"
+                [class]="'prompt kind-' + prompt.kind"
+                data-testid="assistance-prompt"
+                [attr.data-prompt-id]="prompt.id"
+                [attr.data-prompt-kind]="prompt.kind"
+                [attr.data-can-insert]="!!prompt.insertText"
+              >
+                <span class="prompt-badge" aria-hidden="true">{{ badge(prompt.kind) }}</span>
+                <span class="prompt-message" data-testid="assistance-message">
+                  {{ prompt.message }}
+                </span>
+
+                @if (prompt.insertText) {
+                  <span class="prompt-wording" data-testid="assistance-wording">
+                    “{{ prompt.insertText }}”
+                  </span>
+                  <span class="prompt-source" data-testid="assistance-source">
+                    {{ prompt.source }}
+                  </span>
+                }
+
+                <span class="prompt-actions">
+                  @if (prompt.insertText) {
+                    <button
+                      type="button"
+                      class="prompt-insert"
+                      data-testid="assistance-insert"
+                      [disabled]="!canInsert()"
+                      [attr.aria-label]="'Insert this wording into the narrative'"
+                      (mousedown)="keepFocus($event)"
+                      (click)="onInsert(prompt)"
+                    >
+                      Insert
+                    </button>
+                    @if (!canInsert()) {
+                      <span class="prompt-note" data-testid="assistance-no-cursor">
+                        Place the cursor in the narrative first
+                      </span>
+                    }
+                  } @else {
+                    <!-- No wording ships for this prompt because none could be
+                         attributed. It advises; it does not draft. -->
+                    <span class="prompt-note" data-testid="assistance-no-proposal">
+                      Advisory only — no sourced wording to insert
+                    </span>
+                  }
+                  <button
+                    type="button"
+                    class="prompt-dismiss"
+                    data-testid="assistance-dismiss"
+                    [attr.aria-label]="'Dismiss this suggestion'"
+                    (click)="dismiss(prompt)"
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </li>
+            }
+          </ul>
+        }
+
+        <p class="assistant-caveat" data-testid="assistance-caveat">
+          Advisory only. Nothing is inserted unless you press Insert, and you can save and complete
+          the form with suggestions outstanding.
+        </p>
+      </div>
+    }
+  </section>
+}

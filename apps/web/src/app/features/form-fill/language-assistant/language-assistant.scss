@@ -1,0 +1,224 @@
+// UC-06 Legal Language Assistant.
+//
+// Amber throughout: this is advisory, in the same register as UC-03's flags and
+// UC-05's hints. Red stays reserved for UC-07 sensitive material (CLAUDE.md
+// rule 6), so nothing here reaches for it — a suggestion about wording is not an
+// alarm. Design tokens only; no hardcoded colour.
+
+.assistant,
+.assistant-off {
+  box-sizing: border-box;
+  border: 1px solid var(--mg-border);
+  border-left: 3px solid var(--mg-amber-500);
+  border-radius: var(--mg-radius-md, 10px);
+  background: var(--mg-surface);
+  font-size: 0.82rem;
+}
+
+.assistant-off {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--mg-ink-500);
+}
+
+.assistant-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.assistant-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--mg-ink-900);
+  text-align: left;
+  cursor: pointer;
+
+  // Public-sector context: focus must be visible, not merely present.
+  &:focus-visible {
+    outline: 2px solid var(--mg-blue-600);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+.chevron {
+  flex: none;
+  width: 0.9em;
+  color: var(--mg-ink-500);
+}
+
+.assistant-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.assistant-count {
+  flex: none;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: var(--mg-radius-pill, 10px);
+  background: var(--mg-amber-050);
+  color: var(--mg-amber-700);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.assistant-action {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-sm, 6px);
+  background: var(--mg-surface);
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--mg-ink-700);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mg-surface-sunken);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--mg-blue-600);
+    outline-offset: 2px;
+  }
+}
+
+.assistant-body {
+  padding: 0 12px 12px;
+}
+
+.assistant-degraded,
+.assistant-empty,
+.assistant-caveat {
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--mg-ink-500);
+}
+
+.assistant-degraded {
+  padding: 6px 8px;
+  border-radius: var(--mg-radius-sm, 6px);
+  background: var(--mg-surface-sunken);
+  color: var(--mg-ink-700);
+}
+
+.assistant-caveat {
+  margin: 10px 0 0;
+}
+
+.prompt-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-sm, 6px);
+  background: var(--mg-surface-sunken);
+  line-height: 1.45;
+}
+
+.prompt-badge {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--mg-amber-050);
+  color: var(--mg-amber-700);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.prompt-message {
+  color: var(--mg-ink-900);
+}
+
+.prompt-wording {
+  color: var(--mg-ink-700);
+  font-style: italic;
+}
+
+.prompt-source {
+  font-size: 0.7rem;
+  color: var(--mg-ink-500);
+}
+
+.prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.prompt-insert,
+.prompt-dismiss {
+  padding: 3px 10px;
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-sm, 6px);
+  background: var(--mg-surface);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+
+  &:hover:not([disabled]) {
+    background: var(--mg-amber-050);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--mg-blue-600);
+    outline-offset: 2px;
+  }
+  &[disabled] {
+    cursor: not-allowed;
+    color: var(--mg-ink-500);
+    opacity: 0.75;
+  }
+}
+
+.prompt-insert {
+  font-weight: 600;
+  border-color: var(--mg-amber-500);
+  color: var(--mg-amber-700);
+}
+
+.prompt-note {
+  font-size: 0.7rem;
+  color: var(--mg-ink-500);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

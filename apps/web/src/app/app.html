@@ -1,0 +1,64 @@
+<header class="app-bar" data-testid="app-bar">
+  <a routerLink="/" class="brand" aria-label="MGs Forms — dashboard">
+    <span class="brand-mark"><app-icon name="shield" [size]="18" /></span>
+    <span class="brand-name">MGs Forms</span>
+  </a>
+
+  <!-- Only destinations that exist: the dashboard, and the case list on it.
+       Nothing here points nowhere. -->
+  <nav class="app-nav" aria-label="Main" data-testid="app-nav">
+    <a
+      routerLink="/"
+      routerLinkActive="is-active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="nav-item"
+      data-testid="nav-dashboard"
+    >
+      <app-icon name="dashboard" [size]="17" />
+      <span>Dashboard</span>
+    </a>
+    <a
+      routerLink="/"
+      fragment="cases"
+      class="nav-item"
+      data-testid="nav-cases"
+    >
+      <app-icon name="folder" [size]="17" />
+      <span>Cases</span>
+    </a>
+    <a
+      routerLink="/archive"
+      routerLinkActive="is-active"
+      class="nav-item"
+      data-testid="nav-archive"
+    >
+      <app-icon name="folder" [size]="17" />
+      <span>Archive</span>
+    </a>
+    @if (isAdmin()) {
+      <a
+        routerLink="/admin"
+        routerLinkActive="is-active"
+        class="nav-item"
+        data-testid="nav-admin"
+      >
+        <app-icon name="shield" [size]="17" />
+        <span>Admin</span>
+      </a>
+    }
+  </nav>
+
+  @if (user(); as u) {
+    <div class="app-user" data-testid="app-user">
+      <span class="user-name">{{ u.name }}</span>
+      <span class="user-avatar" aria-hidden="true">{{ initials(u.name) }}</span>
+      <button type="button" class="logout-button" data-testid="logout-button" (click)="logout()">
+        Sign out
+      </button>
+    </div>
+  }
+</header>
+
+<main class="app-main">
+  <router-outlet />
+</main>

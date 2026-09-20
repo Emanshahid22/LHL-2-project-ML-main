@@ -1,0 +1,108 @@
+# Reference-baseline capture — the AUTHORITATIVE environment (deviation 12,
+# final resolution).
+#
+# PR #194 proved cross-environment pixel comparison cannot be made
+# deterministic by assets alone: after the font embed removed the
+# font-SELECTION variable, all 11 baselines still drifted 1-4% on
+# ubuntu-latest because rasterization (FreeType/fontconfig hinting and
+# antialiasing) differs between the dev VPS and the runner. No container
+# runtime exists on the VPS to pin the environment locally, so the fix is to
+# make CI's own runner the one true capture environment: baselines committed
+# to e2e/reference-renders MUST come from this workflow, produced by the
+# exact steps ci.yml's "Render regression" step uses to produce candidates.
+# Local `npm run render-regression` remains useful but ADVISORY — CI is the
+# gate.
+#
+# Triggers:
+#   - push to any `capture-baselines/**` branch (the working trigger: the dev
+#     VPS has SSH-only GitHub access — no API token — so workflow_dispatch
+#     cannot be invoked from it; pushing a branch can be. Point such a branch
+#     at the commit to capture from and push it.)
+#   - workflow_dispatch (for anyone with UI/API access; note GitHub only
+#     lists a workflow for dispatch once it exists on the default branch,
+#     which in this repo is a placeholder — hence the push convention above.)
+#
+# Retrieval (same SSH-only constraint): the captured PNGs + provenance
+# sidecars are committed back to `<capture-branch>-results`, fetchable over
+# SSH, and ALSO uploaded as an artifact for human download from the UI.
+# Recapture is a DELIBERATE act for a PR: fetch the results branch, review
+# the renders visually against the outgoing baselines, commit them on the PR
+# branch, and delete both throwaway branches.
+
+name: Capture reference renders
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['capture-baselines/**']
+
+permissions:
+  contents: write # push of the -results branch, GITHUB_TOKEN via checkout
+
+concurrency:
+  group: capture-renders-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Capture on ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # From here to the capture itself, the steps MIRROR ci.yml's path to
+      # its "Render regression" step (same runner, same lockfile-pinned
+      # toolchain, same browser install) — that identity is the whole point:
+      # baseline and candidate must be produced by byte-identical
+      # environments. If ci.yml's Node/browser steps change, change these to
+      # match.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      # In place, so the provenance sidecars land beside the PNGs exactly as
+      # they will be committed. The capture tool records the runner image and
+      # run id into each sidecar (capturedOn) from the env below.
+      - name: Capture the 11 baselines
+        env:
+          RUNNER_LABEL: ubuntu-latest
+        run: node tools/capture-reference-renders --out e2e/reference-renders
+
+      # Sanity before publishing: the candidate a CI run would produce from
+      # these bytes, in this same environment, must be zero-drift. This does
+      # NOT prove the PR's CI will pass (runner images roll), but it catches
+      # a broken capture immediately.
+      - name: Self-check — recapture and diff against the fresh baselines
+        run: |
+          node tools/capture-reference-renders --out test-results/render-candidates
+          node tools/pixel-diff --baseline e2e/reference-renders --candidate test-results/render-candidates
+
+      - name: Publish results branch (SSH-only dev box fetches this)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add e2e/reference-renders
+          git commit -m "capture: reference renders on ubuntu-latest (run ${GITHUB_RUN_ID})"
+          git push -f origin "HEAD:refs/heads/${GITHUB_REF_NAME}-results"
+
+      - name: Upload artifact (human review path)
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-renders-ubuntu-${{ github.run_id }}
+          path: e2e/reference-renders/
+          retention-days: 14

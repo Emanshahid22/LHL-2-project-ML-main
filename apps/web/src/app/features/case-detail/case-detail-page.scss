@@ -1,0 +1,76 @@
+@use 'tokens' as t;
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: var(--mg-blue-600);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 500;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.case-card {
+  max-width: 680px;
+  border-radius: var(--mg-radius-lg);
+  border-color: var(--mg-border);
+  box-shadow: var(--mg-shadow-sm);
+
+  .urn {
+    font-family: monospace;
+  }
+
+  mat-card-actions {
+    padding: 8px 16px 16px;
+  }
+}
+
+.case-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0 0;
+
+  dt {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    color: var(--mg-ink-500);
+  }
+
+  dd {
+    margin: 2px 0 0;
+  }
+}
+
+.offence-list {
+  margin: 0;
+  padding-left: 18px;
+
+  li {
+    margin-bottom: 4px;
+  }
+}
+
+.error-panel {
+  border: 1px solid var(--mg-danger-500);
+  border-radius: var(--mg-radius-md);
+  padding: 18px;
+  max-width: 640px;
+  color: var(--mg-danger-700);
+  background: var(--mg-danger-050);
+
+  p {
+    margin-top: 0;
+  }
+}
+
+.spinner-row {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}

@@ -1,0 +1,173 @@
+/* UC-08 checklist. Blocking rows use the existing danger tokens, advisory rows
+ * the amber advisories wear everywhere else. UC-07's sensitive red is NOT used
+ * here — a quality finding and a sensitivity regime are different messages. */
+.review-panel {
+  margin: var(--mg-s5) 0;
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-md);
+  background: var(--mg-surface);
+  box-shadow: var(--mg-shadow-sm);
+  padding: var(--mg-s4);
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--mg-s3);
+}
+
+.review-title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--mg-ink-900);
+}
+
+.check-summary {
+  list-style: none;
+  margin: 0 0 var(--mg-s4);
+  padding: 0;
+  display: grid;
+  gap: var(--mg-s1);
+}
+
+.check-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--mg-s3);
+  font-size: 0.85rem;
+}
+
+.check-name {
+  color: var(--mg-ink-700);
+}
+
+.check-status {
+  font-weight: 600;
+
+  &.status-clean {
+    color: var(--mg-success-700);
+  }
+  &.status-issues {
+    color: var(--mg-danger-700);
+  }
+  &.status-incomplete {
+    color: var(--mg-amber-700);
+  }
+}
+
+.check-note {
+  color: var(--mg-ink-500);
+  font-size: 0.78rem;
+}
+
+.review-ready {
+  display: flex;
+  align-items: center;
+  gap: var(--mg-s2);
+  padding: var(--mg-s3) var(--mg-s4);
+  border-radius: var(--mg-radius-sm);
+  background: var(--mg-success-050);
+  color: var(--mg-success-700);
+  font-weight: 600;
+}
+
+.issue-group {
+  margin: var(--mg-s4) 0;
+  border-left: 3px solid var(--mg-border);
+  padding-left: var(--mg-s4);
+
+  &.group-blocking {
+    border-left-color: var(--mg-danger-500);
+  }
+  &.group-advisory {
+    border-left-color: var(--mg-amber-500);
+  }
+  &.group-incomplete {
+    border-left-color: var(--mg-amber-700);
+  }
+}
+
+.group-title {
+  margin: 0 0 var(--mg-s2);
+  font-size: 0.85rem;
+  color: var(--mg-ink-700);
+}
+
+.group-blocking .group-title {
+  color: var(--mg-danger-700);
+}
+
+.issue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--mg-s3);
+}
+
+.issue {
+  display: grid;
+  gap: 2px;
+  font-size: 0.88rem;
+}
+
+.issue-subject {
+  font-weight: 600;
+  color: var(--mg-ink-900);
+}
+
+.issue-message {
+  color: var(--mg-ink-700);
+}
+
+.issue-jump {
+  justify-self: start;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--mg-blue-600);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.ack-label {
+  display: grid;
+  gap: 2px;
+  font-size: 0.78rem;
+  color: var(--mg-ink-500);
+}
+
+.ack-reason {
+  padding: var(--mg-s2);
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-sm);
+  font: inherit;
+  color: var(--mg-ink-900);
+}
+
+.incomplete-guidance {
+  margin: 0 0 var(--mg-s2);
+  color: var(--mg-amber-700);
+  font-size: 0.85rem;
+}
+
+.review-footer {
+  margin-top: var(--mg-s4);
+  display: grid;
+  gap: var(--mg-s2);
+  justify-items: start;
+}
+
+.finalise-error {
+  margin: 0;
+  color: var(--mg-danger-700);
+  font-weight: 500;
+}
+
+.review-caveat {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--mg-ink-500);
+}

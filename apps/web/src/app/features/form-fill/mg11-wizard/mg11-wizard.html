@@ -1,0 +1,106 @@
+<div class="wizard" data-testid="mg11-wizard">
+  <ol class="step-rail" data-testid="wizard-steps">
+    @for (step of steps; track step.title; let i = $index) {
+      <li
+        class="step-head"
+        [class.is-current]="currentStep() === i"
+        [class.is-visited]="isVisited(i)"
+        [class.is-complete]="isVisited(i) && isStepComplete(i)"
+      >
+        <button
+          type="button"
+          class="step-button"
+          [attr.data-testid]="'wizard-step-' + (i + 1)"
+          [attr.aria-current]="currentStep() === i ? 'step' : null"
+          [disabled]="!isVisited(i)"
+          (click)="goTo(i)"
+        >
+          <span class="step-number">{{ i + 1 }}</span>
+          <span class="step-title">{{ step.title }}</span>
+        </button>
+      </li>
+    }
+  </ol>
+
+  <div class="step-meta">
+    <span class="step-position" data-testid="wizard-step-position">
+      Step {{ currentStep() + 1 }} of {{ steps.length }} — {{ steps[currentStep()].title }}
+    </span>
+    @if (stepProgress().total > 0) {
+      <span class="step-progress" data-testid="wizard-step-progress">
+        {{ stepProgress().done }} of {{ stepProgress().total }} required on this step
+      </span>
+    }
+  </div>
+
+  <div class="step-body">
+    @if (isDeclarationStep()) {
+      <!-- Read-only statutory wording: a server-owned constant, never a field
+           value and never stored per draft. -->
+      <section class="declaration" data-testid="declaration-block">
+        <h3>Statutory declaration</h3>
+        <blockquote class="declaration-text" data-testid="declaration-text" readonly>
+          {{ declarationText }}
+        </blockquote>
+        <p class="declaration-note">
+          This wording is fixed by statute (s.9 Criminal Justice Act 1967 / s.5B Magistrates’
+          Courts Act 1980) and cannot be edited. The witness must read and confirm it.
+        </p>
+      </section>
+
+      @if (declarationReminder()) {
+        <p class="declaration-reminder" role="alert" data-testid="declaration-reminder">
+          Please confirm the declaration before continuing — the statement is inadmissible under
+          s.9 without it.
+        </p>
+      }
+    }
+
+    @if (showNarrative()) {
+      <app-narrative-field
+        [control]="narrativeControl()"
+        [field]="narrativeField()"
+        [draftId]="draftId()"
+      />
+    }
+
+    <app-dynamic-form
+      [template]="template()"
+      [initialValues]="initialValues()"
+      [autoFill]="autoFill()"
+      [outcomes]="outcomes()"
+      [visibleFieldIds]="visibleFieldIds()"
+      [showSectionTitles]="false"
+      [draftId]="draftId()"
+      (formReady)="onFormReady($event)"
+    />
+
+    @if (currentStep() === steps.length - 1) {
+      <p class="signature-note" data-testid="signature-note">
+        The generated PDF will carry space for a wet signature, so the witness can sign the
+        printed statement.
+      </p>
+    }
+  </div>
+
+  <nav class="step-nav">
+    <button
+      matButton
+      type="button"
+      data-testid="wizard-back"
+      [disabled]="currentStep() === 0"
+      (click)="back()"
+    >
+      ← Back
+    </button>
+    <button
+      matButton="filled"
+      type="button"
+      data-testid="wizard-next"
+      [disabled]="currentStep() === steps.length - 1"
+      (click)="next()"
+    >
+      Next →
+    </button>
+  </nav>
+</div>

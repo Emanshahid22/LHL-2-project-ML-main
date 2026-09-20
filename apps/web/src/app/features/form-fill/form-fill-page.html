@@ -1,0 +1,245 @@
+<a routerLink="/" class="back-link">← Dashboard</a>
+
+@if (loading()) {
+  <div class="spinner-row"><mat-spinner diameter="32" /></div>
+} @else if (loadError(); as error) {
+  <div class="error-panel" data-testid="load-error">
+    <p>{{ error }}</p>
+    <button matButton="filled" type="button" (click)="load()">Retry</button>
+  </div>
+} @else if (template(); as t) {
+  @if (caseLinkWarning(); as warning) {
+    <div class="warning-banner" role="alert" data-testid="case-link-warning">
+      {{ warning }}
+    </div>
+  }
+
+  @if (caseChanged()) {
+    <div class="warning-banner case-changed-banner" role="alert" data-testid="case-changed-banner">
+      <span>The case file has changed since this form was populated.</span>
+      <button
+        matButton
+        type="button"
+        data-testid="rerun-autofill"
+        [disabled]="autoFilling()"
+        (click)="rerunAutoFill()"
+      >
+        Re-run auto-fill
+      </button>
+    </div>
+  }
+
+  @if (autoFillSummary(); as summary) {
+    <div class="autofill-summary" role="status" data-testid="autofill-summary">
+      <span>
+        {{ summary.filled }} of {{ summary.total }} mappable fields were filled from the case
+        file. Review each value — edit or clear anything that is not right.
+      </span>
+      <button
+        type="button"
+        class="dismiss-button"
+        aria-label="Dismiss"
+        data-testid="dismiss-autofill-summary"
+        (click)="dismissAutoFillSummary()"
+      >
+        ✕
+      </button>
+    </div>
+  }
+
+  <header class="form-header" data-testid="form-header">
+    <div class="title-row">
+      <div>
+        <h1>
+          <span class="form-code">{{ t.code }}</span> {{ t.name }}
+        </h1>
+        <mat-chip-set>
+          @if (draft()?.case; as c) {
+            <mat-chip>
+              <a class="case-chip-link" [routerLink]="['/cases', c.id]">{{ c.urn }} — {{ c.defendantName }}</a>
+            </mat-chip>
+          } @else {
+            <mat-chip class="standalone-chip">Standalone</mat-chip>
+          }
+          @if (vulnerableWitness()) {
+            <mat-chip class="vulnerable-chip" data-testid="vulnerable-witness-indicator">
+              Vulnerable Witness
+            </mat-chip>
+          }
+          @if (sensitiveMaterial()) {
+            <!-- UC-04: raised by a row's classification alone. Wording is
+                 deliberately "marked", not "handled" — UC-07 owns the handling
+                 and does not exist yet, so nothing here may imply it is done. -->
+            <mat-chip
+              class="sensitive-chip"
+              data-testid="sensitive-material-indicator"
+              matTooltip="At least one scheduled item is marked sensitive, so this form is flagged for sensitive-material handling."
+            >
+              Sensitive Material
+            </mat-chip>
+          }
+          <!-- UC-03 sourcing: a template whose field set no practitioner has signed
+               off must never read as filing-ready. templateUnverified() also
+               catches templates with no verification marker at all ("not yet
+               assessed") — checking the literal 'unverified' here left the five
+               legacy templates unlabelled. -->
+          @if (templateUnverified()) {
+            <mat-chip
+              class="unverified-chip"
+              data-testid="unverified-template"
+              matTooltip="The field set for this form has not been confirmed by a practitioner. Check each box against the current official form before relying on it."
+            >
+              Unverified template — pending practitioner sign-off
+            </mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+
+      <div class="save-area">
+        <span class="save-status" data-testid="save-status">
+          @switch (saveState()) {
+            @case ('saving') {
+              Saving…
+            }
+            @case ('dirty') {
+              Unsaved changes
+            }
+            @case ('error') {
+              Save failed
+            }
+            @default {
+              @if (lastSavedAt(); as at) {
+                Saved {{ at | date: 'HH:mm:ss' }}
+              }
+            }
+          }
+        </span>
+        <button matButton="filled" type="button" data-testid="save-draft" (click)="saveDraft()">
+          Save draft
+        </button>
+        <!-- UC-08: the single entry point to finalisation. Enabled once at
+             least one field is complete (the scope's pre-condition). -->
+        @if (!locked()) {
+          <button
+            matButton="outlined"
+            type="button"
+            data-testid="review-trigger"
+            [disabled]="!anyFieldComplete() || reviewing()"
+            (click)="runReview()"
+          >
+            {{ reviewing() ? 'Checking…' : 'Review & Finalise' }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="progress-row" data-testid="progress">
+      <mat-progress-bar mode="determinate" [value]="progressPercent()" />
+      <span class="progress-label" data-testid="progress-label">
+        {{ completedRequired() }} of {{ totalRequired() }} required fields completed
+      </span>
+    </div>
+  </header>
+
+  @if (completeness(); as check) {
+    @if (!completenessDismissed()) {
+      <!-- UC-04: advisory only. It never blocks saving or completing the form. -->
+      <div class="warning-banner completeness-banner" role="status" data-testid="completeness-banner">
+        <span>
+          This {{ complexityLabel(check.complexity) }} case has
+          <strong data-testid="completeness-count">{{ check.itemCount }}</strong>
+          scheduled {{ check.itemCount === 1 ? 'item' : 'items' }}, fewer than the
+          <strong>{{ check.threshold }}</strong> usually expected. Check whether any unused material
+          is still to be scheduled — you can carry on either way.
+        </span>
+        <button
+          type="button"
+          class="dismiss-button"
+          aria-label="Dismiss"
+          data-testid="dismiss-completeness"
+          (click)="dismissCompleteness()"
+        >
+          ✕
+        </button>
+      </div>
+    }
+  }
+
+  @if (superseded()) {
+    <!-- UC-10: superseded by an amendment. The API refuses every edit and
+         reopen on this version (409) — this banner is the honest copy. -->
+    <div class="finalised-banner superseded-banner" role="status" data-testid="superseded-banner">
+      <strong>Superseded.</strong> An amendment replaced this version — it is read-only forever.
+      Find the current version in the case's Documents section or the
+      <a routerLink="/archive">archive</a>.
+    </div>
+  } @else if (finalised()) {
+    <!-- UC-08 post-conditions. UC-09: the old stub grew into the real controls below. -->
+    <div class="finalised-banner" role="status" data-testid="finalised-banner">
+      <strong>Finalised.</strong> This form is read-only now.
+      <button
+        matButton
+        type="button"
+        data-testid="reopen-button"
+        [disabled]="reopening()"
+        (click)="reopen()"
+      >
+        Reopen for amendment
+      </button>
+    </div>
+  } @else if (reviewReport(); as report) {
+    <app-review-panel
+      [report]="report"
+      [finalising]="finalising()"
+      [finaliseError]="finaliseError()"
+      (jump)="onJump($event)"
+      (finalise)="onFinalise($event)"
+      (rerun)="runReview()"
+    />
+  }
+
+  @if (draft(); as d) {
+    <!-- UC-09: generation entry point — a finalised or clean-reviewed draft
+         (the API re-checks the gate regardless of what the client shows). -->
+    @if (d.status === 'FINALISED' || d.status === 'REVIEWED') {
+      <section class="pdf-section" data-testid="pdf-section" aria-label="Generated documents">
+        <app-pdf-controls [draftId]="d.id" />
+      </section>
+    }
+  }
+
+  <mat-card appearance="outlined" class="form-card">
+    <mat-card-content>
+      @if (isMg11()) {
+        <!-- UC-03: guided wizard around the same shared field machinery. -->
+        <app-mg11-wizard
+          [template]="t"
+          [draftId]="draft()?.id ?? null"
+          [initialValues]="draft()?.values ?? {}"
+          [autoFill]="draft()?.autoFill ?? {}"
+          [outcomes]="autoFillOutcomes()"
+          [revealField]="revealField()"
+          (formReady)="onFormReady($event)"
+          (vulnerableWitnessChange)="vulnerableWitness.set($event)"
+        />
+      } @else {
+        <app-dynamic-form
+          [template]="t"
+          [draftId]="draft()?.id ?? null"
+          [initialValues]="draft()?.values ?? {}"
+          [autoFill]="draft()?.autoFill ?? {}"
+          [outcomes]="autoFillOutcomes()"
+          [sensitiveSection]="draft()?.sensitiveSection ?? null"
+          (formReady)="onFormReady($event)"
+        />
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- UC-05: cross-field findings sit BELOW the form section, never in a field's
+       inline error slot. The scope is explicit about this. -->
+  <app-consistency-issues
+    [findings]="consistencyFindings()"
+    [unverified]="templateUnverified()"
+  />
+}
